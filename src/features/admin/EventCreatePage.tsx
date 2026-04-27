@@ -1,8 +1,8 @@
-import { Camera, Plus, Trash2 } from 'lucide-react';
+import { Camera, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
@@ -87,6 +87,11 @@ export function EventCreatePage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+          <Link to="/admin" className="hover:text-indigo-600">Mis eventos</Link>
+          <ChevronRight size={14} />
+          <span className="text-gray-900 font-medium">Nuevo evento</span>
+        </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Crear evento</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

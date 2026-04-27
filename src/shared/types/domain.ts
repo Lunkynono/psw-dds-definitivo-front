@@ -57,7 +57,7 @@ export interface Survey {
   hora_apertura?: string | null;
   hora_cierre?: string | null;
   hora_reapertura?: string | null;
-  competicion?: { nombre?: string; evento?: { nombre?: string } };
+  competicion?: { id?: number; nombre?: string; evento_id?: number; evento?: { id?: number; nombre?: string } };
 }
 
 export interface ResultRow {

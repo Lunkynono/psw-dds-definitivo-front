@@ -1,7 +1,7 @@
-import { Clock, Pencil } from 'lucide-react';
+import { ChevronRight, Clock, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../../shared/components/ui/Badge';
 import { Button } from '../../shared/components/ui/Button';
 import { Modal } from '../../shared/components/ui/Modal';
@@ -286,6 +286,19 @@ export function SurveyResultsPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 flex-wrap">
+          <Link to="/admin" className="hover:text-indigo-600">Mis eventos</Link>
+          <ChevronRight size={14} />
+          <Link to={`/admin/eventos/${encuesta?.competicion?.evento?.id}/editar`} className="hover:text-indigo-600">
+            {encuesta?.competicion?.evento?.nombre}
+          </Link>
+          <ChevronRight size={14} />
+          <Link to={`/admin/competiciones/${encuesta?.competicion_id}`} className="hover:text-indigo-600">
+            {encuesta?.competicion?.nombre}
+          </Link>
+          <ChevronRight size={14} />
+          <span className="text-gray-900 font-medium">{encuesta?.nombre}</span>
+        </div>
         <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{encuesta?.nombre ?? 'Resultados'}</h1>
