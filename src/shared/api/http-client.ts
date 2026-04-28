@@ -8,7 +8,11 @@
  *   que las páginas puedan mostrarlos vía `toast.error(err.message)`.
  */
 export class HttpClient {
-  constructor(private readonly baseUrl: string) {}
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  private readonly baseUrl: string;
 
   async get<T>(path: string, userId?: string): Promise<T> {
     return this.request<T>(path, { method: 'GET' }, userId);
