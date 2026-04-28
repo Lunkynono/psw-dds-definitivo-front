@@ -105,7 +105,6 @@ export const construirOpcionesRubrica = (
 
   return aspectosValidos.flatMap((aspecto, aspectoIndex) =>
     RUBRICA_NIVELES.map((nivel, nivelIndex) => ({
-      id: 0,
       texto: nivel.label,
       aspecto: aspecto.texto.trim(),
       nivel: nivel.key,

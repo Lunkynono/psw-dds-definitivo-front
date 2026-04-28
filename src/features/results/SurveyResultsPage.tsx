@@ -25,7 +25,7 @@ import {
 
 type Comentario = { texto: string; criterio: string; proyecto: string; origen: 'Público' | 'Jurado' };
 
-const TABS = ['Ranking', 'Comentarios', 'Asignaciones'];
+const TABS = ['Ranking', 'Comentarios', 'Criterios', 'Asignaciones'];
 
 const STATE_LABEL: Record<SurveyState, string> = {
   borrador: 'Borrador',
@@ -61,6 +61,7 @@ export function SurveyResultsPage() {
   const [juecesAsignados, setJuecesAsignados] = useState<string[]>([]);
   const [guardandoAsignaciones, setGuardandoAsignaciones] = useState(false);
   const [asignacionesCargadas, setAsignacionesCargadas] = useState(false);
+  const [criteriosAsignados, setCriteriosAsignados] = useState<Array<{ id: number; titulo: string; tipo: string; peso: number }>>([]);
 
   const [modalAbrir, setModalAbrir] = useState(false);
   const [horaApertura, setHoraApertura] = useState('');
@@ -224,11 +225,15 @@ export function SurveyResultsPage() {
   async function cargarAsignaciones() {
     if (!surveyId || asignacionesCargadas) return;
     try {
-      const data = await votifyApi.getSurveyAssignments(Number(surveyId));
+      const [data, criterios] = await Promise.all([
+        votifyApi.getSurveyAssignments(Number(surveyId)),
+        votifyApi.getSurveyCriteria(Number(surveyId))
+      ]);
       setEquiposDisponibles(data.equiposDisponibles);
       setEquiposAsignados(data.equiposAsignados);
       setJuecesDisponibles(data.juecesDisponibles);
       setJuecesAsignados(data.juecesAsignados);
+      setCriteriosAsignados(criterios);
       setAsignacionesCargadas(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al cargar asignaciones');
@@ -371,7 +376,7 @@ export function SurveyResultsPage() {
           {TABS.map((t, i) => (
             <button
               key={t}
-              onClick={() => { setTab(i); if (i === 2) cargarAsignaciones(); }}
+              onClick={() => { setTab(i); if (i === 2 || i === 3) cargarAsignaciones(); }}
               className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
                 tab === i
                   ? 'bg-white text-indigo-700 font-semibold shadow-sm'
@@ -521,6 +526,24 @@ export function SurveyResultsPage() {
         )}
 
         {tab === 2 && (
+          <div className="space-y-3">
+            {criteriosAsignados.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">No hay criterios asignados a esta encuesta</p>
+            ) : (
+              criteriosAsignados.map((c) => (
+                <div key={c.id} className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge color="blue">{c.tipo}</Badge>
+                    <span className="text-sm font-medium text-gray-800">{c.titulo}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">peso: {c.peso}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {tab === 3 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>

@@ -167,6 +167,10 @@ export class VotifyApiFacade {
     return this.http.patch(`/surveys/${surveyId}/schedule`, payload);
   }
 
+  getSurveyCriteria(surveyId: number) {
+    return this.http.get<Array<{ id: number; titulo: string; tipo: string; peso: number }>>(`/surveys/${surveyId}/criteria`);
+  }
+
   getSurveyAssignments(surveyId: number) {
     return this.http.get<{
       equiposDisponibles: Array<{ id: number; nombre: string; proyecto?: Array<{ nombre: string }> }>;

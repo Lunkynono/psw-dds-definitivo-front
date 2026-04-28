@@ -1,4 +1,4 @@
-import { Camera, ChevronRight, Plus } from 'lucide-react';
+import { Camera, ChevronRight, Plus, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -208,38 +208,36 @@ export function EventEditPage() {
         )}
 
         {tab === 1 && (
-          <div className="space-y-4">
-            <div className="flex justify-end">
+          <div>
+            <div className="flex justify-end mb-4">
               <Button onClick={() => setModalCompeticion(true)}>
                 <Plus size={16} /> Añadir competición
               </Button>
             </div>
-            {competiciones.map((comp) => (
-              <div key={comp.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 space-y-2">
-                    <input
-                      defaultValue={comp.nombre}
-                      onBlur={(event) => guardarCompeticion({ ...comp, nombre: event.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                      placeholder="Nombre"
-                    />
-                    <input
-                      defaultValue={comp.descripcion || ''}
-                      onBlur={(event) => guardarCompeticion({ ...comp, descripcion: event.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                      placeholder="Descripción (opcional)"
-                    />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {competiciones.map((comp) => (
+                <Link
+                  key={comp.id}
+                  to={`/admin/competiciones/${comp.id}`}
+                  className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:shadow-gray-200/60 hover:border-gray-200 transition-all duration-200"
+                >
+                  <div className="h-24 w-full bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+                    <Trophy size={28} className="text-indigo-200" />
                   </div>
-                  <Link
-                    to={`/admin/competiciones/${comp.id}`}
-                    className="ml-3 flex items-center gap-1 text-sm text-indigo-600 hover:underline whitespace-nowrap"
-                  >
-                    Ver detalle <ChevronRight size={14} />
-                  </Link>
-                </div>
-              </div>
-            ))}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug">
+                        {comp.nombre}
+                      </h2>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
+                    </div>
+                    {comp.descripcion && (
+                      <p className="text-xs text-gray-400 line-clamp-2 mt-1.5">{comp.descripcion}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
             {competiciones.length === 0 && <p className="text-sm text-gray-500 text-center py-8">No hay competiciones aún</p>}
           </div>
         )}
