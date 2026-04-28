@@ -152,9 +152,13 @@ export function AccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="mb-10 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Acceder a Votify</h1>
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 mb-5">
+          <Plus size={0} className="hidden" />
+          <span className="text-white font-bold text-2xl">V</span>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Votify</h1>
         <p className="text-gray-500 mt-2">Selecciona tu rol para continuar</p>
       </div>
 
@@ -162,8 +166,8 @@ export function AccessPage() {
         {bloques.map(({ icon: Icon, titulo, descripcion, color, to, action }) => {
           const c = colorMap[color];
           return (
-            <div key={titulo} className={`flex flex-col items-center text-center rounded-2xl border ${c.border} ${c.bg} p-7`}>
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${c.icon}`}>
+            <div key={titulo} className={`flex flex-col items-center text-center rounded-2xl border ${c.border} ${c.bg} p-7 shadow-sm hover:shadow-md transition-shadow`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${c.icon} shadow-sm`}>
                 <Icon size={26} />
               </div>
               <h2 className="text-lg font-bold text-gray-900 mb-2">{titulo}</h2>
@@ -172,12 +176,12 @@ export function AccessPage() {
                 <button
                   type="button"
                   onClick={abrirModalParticipante}
-                  className={`w-full py-2.5 rounded-xl font-medium text-sm transition-colors text-center ${c.btn}`}
+                  className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${c.btn}`}
                 >
                   Entrar como participante
                 </button>
               ) : (
-                <Link to={to ?? '/login'} className={`w-full py-2.5 rounded-xl font-medium text-sm transition-colors text-center ${c.btn}`}>
+                <Link to={to ?? '/login'} className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${c.btn}`}>
                   Entrar como {titulo.toLowerCase()}
                 </Link>
               )}

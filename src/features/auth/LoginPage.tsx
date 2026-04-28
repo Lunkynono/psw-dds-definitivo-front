@@ -1,3 +1,4 @@
+import { Vote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -18,10 +19,6 @@ export function LoginPage() {
   const { userId, setSession } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
-  // Si ya hay sesión activa al entrar a /login, resolvemos el rol del
-  // usuario contra el backend (`/auth/me`) y le mandamos a su panel.
-  // El backend determina el rol: admin si tiene eventos como organizador,
-  // juez en caso contrario (`UserRoleService.resolveRole`).
   useEffect(() => {
     if (!userId) return;
     votifyApi.me(userId)
@@ -61,72 +58,82 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl shadow-md w-full max-w-sm p-8">
-        <Link to="/acceso" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-5 transition-colors">
-          ← Volver
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1 text-center">Votify</h1>
-        <p className="text-sm text-gray-500 text-center mb-6">
-          {isRegistro ? 'Crear cuenta' : 'Iniciar sesión'}
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl shadow-lg mb-4">
+            <Vote size={28} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Votify</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {isRegistro ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {isRegistro && (
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 p-8 border border-gray-100">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {isRegistro && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
+                <input
+                  {...register('nombre', { required: 'El nombre es obligatorio' })}
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+                  placeholder="Tu nombre completo"
+                />
+                {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre.message}</p>}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Correo electrónico</label>
               <input
-                {...register('nombre', { required: 'El nombre es obligatorio' })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Tu nombre"
+                {...register('correo', {
+                  required: 'El correo es obligatorio',
+                  pattern: { value: /^\S+@\S+\.\S+$/, message: 'Correo inválido' }
+                })}
+                type="email"
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+                placeholder="correo@ejemplo.com"
               />
-              {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre.message}</p>}
+              {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo.message}</p>}
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
-            <input
-              {...register('correo', {
-                required: 'El correo es obligatorio',
-                pattern: { value: /^\S+@\S+\.\S+$/, message: 'Correo inválido' }
-              })}
-              type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="correo@ejemplo.com"
-            />
-            {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo.message}</p>}
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña</label>
+              <input
+                {...register('contrasena', {
+                  required: 'La contraseña es obligatoria',
+                  minLength: { value: 6, message: 'Mínimo 6 caracteres' }
+                })}
+                type="password"
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+                placeholder="••••••••"
+              />
+              {errors.contrasena && <p className="text-red-500 text-xs mt-1">{errors.contrasena.message}</p>}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <input
-              {...register('contrasena', {
-                required: 'La contraseña es obligatoria',
-                minLength: { value: 6, message: 'Mínimo 6 caracteres' }
-              })}
-              type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-            {errors.contrasena && <p className="text-red-500 text-xs mt-1">{errors.contrasena.message}</p>}
-          </div>
+            <button
+              type="submit"
+              disabled={cargando}
+              className="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-200 mt-2"
+            >
+              {cargando ? 'Cargando...' : isRegistro ? 'Crear cuenta' : 'Entrar'}
+            </button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {cargando ? 'Cargando...' : isRegistro ? 'Crear cuenta' : 'Entrar'}
-          </button>
-        </form>
+          <p className="text-center text-sm text-gray-500 mt-5">
+            {isRegistro ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
+            <button className="text-indigo-600 font-semibold hover:underline" onClick={() => setIsRegistro(!isRegistro)}>
+              {isRegistro ? 'Iniciar sesión' : 'Registrarse'}
+            </button>
+          </p>
+        </div>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
-          {isRegistro ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
-          <button className="text-indigo-600 font-medium hover:underline" onClick={() => setIsRegistro(!isRegistro)}>
-            {isRegistro ? 'Iniciar sesión' : 'Registrarse'}
-          </button>
-        </p>
+        <div className="text-center mt-6">
+          <Link to="/acceso" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            ← Volver al inicio
+          </Link>
+        </div>
       </div>
     </div>
   );
