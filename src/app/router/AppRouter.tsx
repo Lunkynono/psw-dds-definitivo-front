@@ -14,6 +14,8 @@ import { EnterRoomPage } from '../../features/public-voting/EnterRoomPage';
 import { IdentifyPublicPage } from '../../features/public-voting/IdentifyPublicPage';
 import { PublicVotePage } from '../../features/public-voting/PublicVotePage';
 import { PublicResultsPage } from '../../features/public-voting/PublicResultsPage';
+import { ParticipantDashboardPage } from '../../features/participant/ParticipantDashboardPage';
+import { ParticipantLiveResultsPage } from '../../features/participant/ParticipantLiveResultsPage';
 
 export function AppRouter() {
   return (
@@ -26,6 +28,8 @@ export function AppRouter() {
         <Route path="/sala/:codigo" element={<IdentifyPublicPage />} />
         <Route path="/sala/:codigo/votar" element={<PublicVotePage />} />
         <Route path="/sala/:codigo/resultados" element={<PublicResultsPage />} />
+        <Route path="/participante/dashboard" element={<ParticipantDashboardPage />} />
+        <Route path="/participante/encuestas/:surveyId/resultados" element={<ParticipantLiveResultsPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
@@ -34,6 +38,7 @@ export function AppRouter() {
           <Route path="/admin/competiciones/:competitionId" element={<CompetitionManagementPage />} />
           <Route path="/admin/competiciones/:competitionId/encuesta/nueva" element={<SurveyCreatePage />} />
           <Route path="/admin/encuestas/:surveyId/resultados" element={<SurveyResultsPage />} />
+          <Route path="/admin/participantes/:participantId" element={<ParticipantDashboardPage />} />
           <Route path="/juez" element={<JudgeDashboardPage />} />
           <Route path="/juez/encuesta/:surveyId/proyecto/:projectId" element={<JudgeVotePage />} />
         </Route>

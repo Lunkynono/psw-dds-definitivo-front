@@ -10,12 +10,15 @@ import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
+import { etiquetaAperturaEncuesta, etiquetaCierre, formatFechaLocal } from '../../shared/utils/dateTime';
 import {
   RUBRICA_NIVELES,
   construirOpcionesRubrica,
   opcionesConTexto,
   reescalarPesosOpciones
 } from '../../shared/utils/scoring';
+
+const ESTADO_ORDER: Record<string, number> = { borrador: 0, programada: 1, abierta: 2, cerrada: 3 };
 
 const TIPO_LABELS = {
   numerico: 'Numérico',
@@ -34,11 +37,27 @@ const TIPO_COLORS = {
 
 type CriterionType = keyof typeof TIPO_LABELS;
 
+const CRITERIO_DRAFT_VACIO = {
+  titulo: '',
+  descripcion: '',
+  tipo: 'numerico' as CriterionType,
+  peso: '1',
+  rango_min: '',
+  rango_max: '',
+  max_selecciones: '',
+  ilimitado: true,
+  opciones: [{ texto: '', peso: 0 }, { texto: '', peso: 1 }],
+  rubricaAspectos: [
+    { texto: 'Calidad técnica', peso: 0.5, descriptores: {} as Record<string, string>, descriptoresAbiertos: false },
+    { texto: 'Presentación', peso: 0.5, descriptores: {} as Record<string, string>, descriptoresAbiertos: false }
+  ]
+};
+
 type Team = {
   id: number;
   nombre: string;
   proyecto?: Array<{ id: number; nombre: string; descripcion?: string | null }>;
-  participante?: Array<{ id: number; nombre: string; correo: string }>;
+  participante?: Array<{ id: number; nombre: string; correo: string; rol?: string | null }>;
 };
 
 type Criterion = {
@@ -58,6 +77,9 @@ type Survey = {
   estado: 'borrador' | 'abierta' | 'programada' | 'cerrada';
   tipo_votante: string;
   codigo_sala?: string | null;
+  hora_apertura?: string | null;
+  hora_cierre?: string | null;
+  hora_reapertura?: string | null;
 };
 
 type Judge = {
@@ -98,24 +120,10 @@ export function CompetitionManagementPage() {
     nombre: '',
     proyectoNombre: '',
     proyectoDesc: '',
-    participantes: [{ nombre: '', correo: '' }]
+    participantes: [{ nombre: '', correo: '', rol: '' }]
   });
 
-  const [nuevoCriterio, setNuevoCriterio] = useState({
-    titulo: '',
-    descripcion: '',
-    tipo: 'numerico' as CriterionType,
-    peso: '1',
-    rango_min: '',
-    rango_max: '',
-    max_selecciones: '',
-    ilimitado: true,
-    opciones: [{ texto: '', peso: 0 }, { texto: '', peso: 1 }],
-    rubricaAspectos: [
-      { texto: 'Calidad técnica', peso: 0.5, descriptores: {} as Record<string, string>, descriptoresAbiertos: false },
-      { texto: 'Presentación', peso: 0.5, descriptores: {} as Record<string, string>, descriptoresAbiertos: false }
-    ]
-  });
+  const [nuevoCriterio, setNuevoCriterio] = useState(CRITERIO_DRAFT_VACIO);
 
   const [correoJuez, setCorreoJuez] = useState('');
   const [encuestasJuez, setEncuestasJuez] = useState<number[]>([]);
@@ -138,6 +146,7 @@ export function CompetitionManagementPage() {
     if (!competitionId) return;
     setCargando(true);
     try {
+      await votifyApi.processScheduledSurveys(undefined, Number(competitionId));
       const summary = await votifyApi.getCompetitionManagement(Number(competitionId)) as CompetitionSummary;
 
       if (summary.competition.evento?.organizador_id && summary.competition.evento.organizador_id !== userId) {
@@ -163,6 +172,10 @@ export function CompetitionManagementPage() {
     if (!nuevoEquipo.nombre.trim() || !nuevoEquipo.proyectoNombre.trim()) {
       return toast.error('Nombre del equipo y proyecto son obligatorios');
     }
+    const participantesValidos = nuevoEquipo.participantes.filter((p) => p.nombre.trim() || p.correo.trim() || p.rol.trim());
+    if (participantesValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
+      return toast.error('Nombre, correo y rol son obligatorios para cada participante');
+    }
 
     setGuardandoEquipo(true);
     try {
@@ -172,16 +185,16 @@ export function CompetitionManagementPage() {
           nombre: nuevoEquipo.proyectoNombre.trim(),
           descripcion: nuevoEquipo.proyectoDesc || null
         },
-        participantes: nuevoEquipo.participantes
-          .filter((participante) => participante.nombre.trim() && participante.correo.trim())
+        participantes: participantesValidos
           .map((participante) => ({
             nombre: participante.nombre.trim(),
-            correo: participante.correo.trim()
+            correo: participante.correo.trim(),
+            rol: participante.rol.trim()
           }))
       });
 
       await cargarDatos();
-      setNuevoEquipo({ nombre: '', proyectoNombre: '', proyectoDesc: '', participantes: [{ nombre: '', correo: '' }] });
+      setNuevoEquipo({ nombre: '', proyectoNombre: '', proyectoDesc: '', participantes: [{ nombre: '', correo: '', rol: '' }] });
       setModalEquipo(false);
       toast.success('Equipo añadido');
     } catch (error) {
@@ -331,21 +344,7 @@ export function CompetitionManagementPage() {
 
       await cargarDatos();
       setCriterioEditando(null);
-      setNuevoCriterio({
-        titulo: '',
-        descripcion: '',
-        tipo: 'numerico',
-        peso: '1',
-        rango_min: '',
-        rango_max: '',
-        max_selecciones: '',
-        ilimitado: true,
-        opciones: [{ texto: '', peso: 0 }, { texto: '', peso: 1 }],
-        rubricaAspectos: [
-          { texto: 'Calidad técnica', peso: 0.5, descriptores: {}, descriptoresAbiertos: false },
-          { texto: 'Presentación', peso: 0.5, descriptores: {}, descriptoresAbiertos: false }
-        ]
-      });
+      setNuevoCriterio(CRITERIO_DRAFT_VACIO);
       setModalCriterio(false);
       toast.success(criterioEditando ? 'Criterio actualizado' : 'Criterio añadido');
     } catch (error) {
@@ -395,6 +394,18 @@ export function CompetitionManagementPage() {
     }
   }
 
+  async function eliminarEncuesta(encuesta: Survey) {
+    if (encuesta.estado !== 'cerrada') return;
+    if (!window.confirm(`¿Eliminar la encuesta cerrada "${encuesta.nombre}"?`)) return;
+    try {
+      await votifyApi.deleteSurvey(encuesta.id);
+      setEncuestas(encuestas.filter((item) => item.id !== encuesta.id));
+      toast.success('Encuesta eliminada');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar encuesta');
+    }
+  }
+
   if (cargando) {
     return (
       <Layout>
@@ -421,16 +432,23 @@ export function CompetitionManagementPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {equipos.map((equipo) => (
-              <button key={equipo.id} type="button" onClick={() => abrirEditarEquipo(equipo)}
-                className="bg-white shadow-card border border-gray-100 rounded-xl p-4 text-left w-full hover:shadow-card-hover hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200">
+              <div key={equipo.id} onClick={() => abrirEditarEquipo(equipo)}
+                role="button" tabIndex={0}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') abrirEditarEquipo(equipo); }}
+                className="bg-white shadow-card border border-gray-100 rounded-xl p-4 text-left w-full hover:shadow-card-hover hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer">
                 <p className="font-semibold text-gray-800">{equipo.nombre}</p>
                 {equipo.proyecto?.[0] && <p className="text-sm text-indigo-600 mt-1">{equipo.proyecto[0].nombre}</p>}
                 <div className="mt-2 space-y-0.5">
                   {equipo.participante?.map((participante) => (
-                    <p key={participante.id} className="text-xs text-gray-500">{participante.nombre} · {participante.correo}</p>
+                    <p
+                      key={participante.id}
+                      className="text-xs text-gray-500"
+                    >
+                      {participante.nombre} · {participante.correo}{participante.rol ? ` · ${participante.rol}` : ''}
+                    </p>
                   ))}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
           {equipos.length === 0 && <p className="text-sm text-gray-500 py-4">No hay equipos aún</p>}
@@ -484,7 +502,16 @@ export function CompetitionManagementPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {encuestas.map((encuesta) => (
+            {[...encuestas].sort((a, b) => {
+                const orderDiff = (ESTADO_ORDER[a.estado] ?? 99) - (ESTADO_ORDER[b.estado] ?? 99);
+                if (orderDiff !== 0) return orderDiff;
+                const key = (e: Survey) => {
+                  if (e.estado === 'cerrada') return e.hora_cierre ? -new Date(e.hora_cierre).getTime() : 0;
+                  if (e.estado === 'abierta') return e.hora_cierre ? new Date(e.hora_cierre).getTime() : Infinity;
+                  return e.hora_apertura ? new Date(e.hora_apertura).getTime() : Infinity;
+                };
+                return key(a) - key(b);
+              }).map((encuesta) => (
               <div key={encuesta.id} className="bg-white shadow-card border border-gray-100 rounded-xl p-4 flex items-center justify-between hover:shadow-card-hover transition-all duration-200">
                 <div>
                   <p className="font-medium text-gray-800">{encuesta.nombre}</p>
@@ -493,10 +520,30 @@ export function CompetitionManagementPage() {
                     <Badge color="blue">{encuesta.tipo_votante}</Badge>
                     {encuesta.codigo_sala && <Badge color="purple">Sala: {encuesta.codigo_sala}</Badge>}
                   </div>
+                  <div className="mt-1 text-xs text-gray-500 space-x-2">
+                    <span>
+                      {etiquetaAperturaEncuesta(encuesta)}: {encuesta.hora_reapertura ? formatFechaLocal(encuesta.hora_reapertura) : encuesta.hora_apertura ? formatFechaLocal(encuesta.hora_apertura) : 'sin programar'}
+                    </span>
+                    <span>
+                      {encuesta.hora_cierre ? etiquetaCierre(encuesta.hora_cierre) : 'Cierra'}: {encuesta.hora_cierre ? formatFechaLocal(encuesta.hora_cierre) : 'sin programar'}
+                    </span>
+                  </div>
                 </div>
-                <Link to={`/admin/encuestas/${encuesta.id}/resultados`} className="text-sm text-indigo-600 hover:underline">
-                  Detalles
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link to={`/admin/encuestas/${encuesta.id}/resultados`} className="text-sm text-indigo-600 hover:underline">
+                    Detalles
+                  </Link>
+                  {encuesta.estado === 'cerrada' && (
+                    <button
+                      type="button"
+                      onClick={() => eliminarEncuesta(encuesta)}
+                      className="text-red-400 hover:text-red-600"
+                      title="Eliminar encuesta cerrada"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -540,7 +587,7 @@ export function CompetitionManagementPage() {
 
       <CriterionModal
         open={modalCriterio}
-        onClose={() => { setModalCriterio(false); setCriterioEditando(null); }}
+        onClose={() => { setModalCriterio(false); setCriterioEditando(null); setNuevoCriterio(CRITERIO_DRAFT_VACIO); }}
         value={nuevoCriterio}
         setValue={setNuevoCriterio}
         loading={guardandoCriterio}
@@ -564,24 +611,32 @@ export function CompetitionManagementPage() {
               <textarea rows={2} value={equipoEditando.proyectoDesc} onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoDesc: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">Participantes</label>
-                <Button type="button" size="sm" variant="secondary" onClick={() => setEquipoEditando({ ...equipoEditando, participantes: [...equipoEditando.participantes, { nombre: '', correo: '', rol: '' }] })}>
-                  <Plus size={13} /> Añadir
-                </Button>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Participantes</label>
+              <div className="space-y-2">
+                {equipoEditando.participantes.map((p, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/40 transition-all group">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-indigo-700">{(p.nombre || p.correo).charAt(0).toUpperCase()}</span>
+                    </div>
+                    <Link
+                      to={p.id ? `/admin/participantes/${p.id}` : '#'}
+                      className="flex-1 min-w-0"
+                    >
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-indigo-700 truncate">{p.nombre || p.correo}</p>
+                      {p.rol && <p className="text-xs text-gray-400 truncate">{p.rol}</p>}
+                    </Link>
+                    {equipoEditando.participantes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setEquipoEditando({ ...equipoEditando, participantes: equipoEditando.participantes.filter((_, j) => j !== i) })}
+                        className="text-red-300 hover:text-red-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              {equipoEditando.participantes.map((p, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 mb-2">
-                  <input value={p.nombre} onChange={(e) => { const ps = [...equipoEditando.participantes]; ps[i] = { ...ps[i], nombre: e.target.value }; setEquipoEditando({ ...equipoEditando, participantes: ps }); }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Nombre *" />
-                  <input value={p.correo} onChange={(e) => { const ps = [...equipoEditando.participantes]; ps[i] = { ...ps[i], correo: e.target.value }; setEquipoEditando({ ...equipoEditando, participantes: ps }); }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Correo *" />
-                  <input value={p.rol} onChange={(e) => { const ps = [...equipoEditando.participantes]; ps[i] = { ...ps[i], rol: e.target.value }; setEquipoEditando({ ...equipoEditando, participantes: ps }); }} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Rol *" />
-                  {equipoEditando.participantes.length > 1 && (
-                    <button type="button" onClick={() => setEquipoEditando({ ...equipoEditando, participantes: equipoEditando.participantes.filter((_, j) => j !== i) })} className="text-red-400 self-center">
-                      <Trash2 size={15} />
-                    </button>
-                  )}
-                </div>
-              ))}
             </div>
             <div className="flex justify-between gap-2">
               <Button variant="danger" loading={guardandoEdicionEquipo} onClick={eliminarEquipo}>Eliminar</Button>
@@ -617,7 +672,7 @@ type TeamDraft = {
   nombre: string;
   proyectoNombre: string;
   proyectoDesc: string;
-  participantes: Array<{ nombre: string; correo: string }>;
+  participantes: Array<{ nombre: string; correo: string; rol: string }>;
 };
 
 function TeamModal({
@@ -653,12 +708,12 @@ function TeamModal({
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700">Participantes</label>
-            <Button type="button" size="sm" variant="secondary" onClick={() => setValue({ ...value, participantes: [...value.participantes, { nombre: '', correo: '' }] })}>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setValue({ ...value, participantes: [...value.participantes, { nombre: '', correo: '', rol: '' }] })}>
               <Plus size={13} /> Añadir
             </Button>
           </div>
           {value.participantes.map((participante, index) => (
-            <div key={index} className="flex gap-2 mb-2">
+            <div key={index} className="flex gap-2 mb-2 flex-wrap">
               <input
                 value={participante.nombre}
                 onChange={(event) => {
@@ -666,8 +721,8 @@ function TeamModal({
                   participantes[index].nombre = event.target.value;
                   setValue({ ...value, participantes });
                 }}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre"
+                className="flex-1 min-w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre *"
               />
               <input
                 value={participante.correo}
@@ -676,8 +731,18 @@ function TeamModal({
                   participantes[index].correo = event.target.value;
                   setValue({ ...value, participantes });
                 }}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="Correo"
+                className="flex-1 min-w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="Correo *"
+              />
+              <input
+                value={participante.rol}
+                onChange={(event) => {
+                  const participantes = [...value.participantes];
+                  participantes[index].rol = event.target.value;
+                  setValue({ ...value, participantes });
+                }}
+                className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="Rol *"
               />
               {value.participantes.length > 1 && (
                 <button type="button" onClick={() => setValue({ ...value, participantes: value.participantes.filter((_, j) => j !== index) })} className="text-red-400">
@@ -923,7 +988,16 @@ function JudgeModal({
         {encuestas.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Asignar a encuestas (opcional)</label>
-            {encuestas.map((encuesta) => (
+            {[...encuestas].sort((a, b) => {
+                const orderDiff = (ESTADO_ORDER[a.estado] ?? 99) - (ESTADO_ORDER[b.estado] ?? 99);
+                if (orderDiff !== 0) return orderDiff;
+                const key = (e: Survey) => {
+                  if (e.estado === 'cerrada') return e.hora_cierre ? -new Date(e.hora_cierre).getTime() : 0;
+                  if (e.estado === 'abierta') return e.hora_cierre ? new Date(e.hora_cierre).getTime() : Infinity;
+                  return e.hora_apertura ? new Date(e.hora_apertura).getTime() : Infinity;
+                };
+                return key(a) - key(b);
+              }).map((encuesta) => (
               <label key={encuesta.id} className="flex items-center gap-2 text-sm mb-1 cursor-pointer">
                 <input
                   type="checkbox"

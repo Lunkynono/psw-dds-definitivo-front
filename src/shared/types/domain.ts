@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'juez';
+export type UserRole = 'admin' | 'juez' | 'participante';
 export type SurveyState = 'borrador' | 'abierta' | 'programada' | 'cerrada';
 export type VoterType = 'juez' | 'publico' | 'ambos';
 export type CriterionType = 'numerico' | 'radio' | 'checklist' | 'rubrica' | 'comentario';

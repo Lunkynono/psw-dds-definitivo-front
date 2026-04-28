@@ -1,7 +1,7 @@
 import { ClipboardList, LayoutDashboard, LucideIcon, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/ui/Button';
 import { Modal } from '../../shared/components/ui/Modal';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
@@ -72,7 +72,10 @@ const estadoInicialFormulario = {
 };
 
 export function AccessPage() {
+  const navigate = useNavigate();
   const [modalParticipante, setModalParticipante] = useState(false);
+  const [modalDashboard, setModalDashboard] = useState(false);
+  const [correoDashboard, setCorreoDashboard] = useState('');
   const [eventos, setEventos] = useState<PublicOption[]>([]);
   const [competiciones, setCompeticiones] = useState<PublicOption[]>([]);
   const [cargandoEventos, setCargandoEventos] = useState(false);
@@ -151,6 +154,14 @@ export function AccessPage() {
     }
   }
 
+  function verDashboardParticipante() {
+    if (!correoDashboard.trim()) {
+      toast.error('Introduce el correo del participante');
+      return;
+    }
+    navigate(`/participante/dashboard?correo=${encodeURIComponent(correoDashboard.trim())}`);
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="mb-10 text-center">
@@ -173,13 +184,18 @@ export function AccessPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-2">{titulo}</h2>
               <p className="text-sm text-gray-500 mb-6 flex-1">{descripcion}</p>
               {action === 'participante' ? (
-                <button
-                  type="button"
-                  onClick={abrirModalParticipante}
-                  className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${c.btn}`}
-                >
-                  Entrar como participante
-                </button>
+                <div className="w-full space-y-2">
+                  <button type="button" onClick={() => setModalDashboard(true)} className={`block w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${c.btn}`}>
+                    Ver mi dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={abrirModalParticipante}
+                    className="w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center bg-white text-sky-700 border border-sky-200 hover:bg-sky-50"
+                  >
+                    Inscribir equipo
+                  </button>
+                </div>
               ) : (
                 <Link to={to ?? '/login'} className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${c.btn}`}>
                   Entrar como {titulo.toLowerCase()}
@@ -336,6 +352,25 @@ export function AccessPage() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalParticipante(false)}>Cancelar</Button>
             <Button loading={guardando} onClick={guardarParticipante}>Guardar</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={modalDashboard} onClose={() => setModalDashboard(false)} title="Dashboard de participante" maxWidth="max-w-md">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Correo del participante</label>
+            <input
+              type="email"
+              value={correoDashboard}
+              onChange={(event) => setCorreoDashboard(event.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="participante@ejemplo.com"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setModalDashboard(false)}>Cancelar</Button>
+            <Button onClick={verDashboardParticipante}>Ver dashboard</Button>
           </div>
         </div>
       </Modal>

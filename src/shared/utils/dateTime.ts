@@ -84,6 +84,14 @@ export const etiquetaApertura = (iso: string | null | undefined): string => {
   return new Date(iso) <= new Date() ? 'Abierta' : 'Abre';
 };
 
+export const etiquetaAperturaEncuesta = (encuesta: {
+  hora_apertura?: string | null;
+  hora_reapertura?: string | null;
+}): string => {
+  if (encuesta.hora_reapertura) return 'Reabierta';
+  return encuesta.hora_apertura ? etiquetaApertura(encuesta.hora_apertura) : 'Abre';
+};
+
 export const etiquetaCierre = (iso: string | null | undefined): string => {
   if (!iso) return '';
   return new Date(iso) <= new Date() ? 'Cerrada' : 'Cierra';

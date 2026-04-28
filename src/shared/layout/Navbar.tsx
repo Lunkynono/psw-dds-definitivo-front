@@ -1,15 +1,17 @@
-import { ClipboardList, LayoutDashboard, LogOut, Vote } from 'lucide-react';
+import { ClipboardList, LayoutDashboard, LogOut, UserRound, Vote } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 
 export function Navbar() {
   const perfil = useAuthStore((state) => state.perfil);
+  const rol = useAuthStore((state) => state.rol);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const location = useLocation();
 
   const esAdmin = location.pathname.startsWith('/admin');
   const esJuez = location.pathname.startsWith('/juez');
+  const esParticipante = location.pathname.startsWith('/participante');
 
   function handleLogout() {
     logout();
@@ -29,28 +31,45 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-0.5">
-          <Link
-            to="/admin"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              esAdmin
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-            }`}
-          >
-            <LayoutDashboard size={15} />
-            <span className="hidden sm:block">Admin</span>
-          </Link>
-          <Link
-            to="/juez"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              esJuez
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-            }`}
-          >
-            <ClipboardList size={15} />
-            <span className="hidden sm:block">Juez</span>
-          </Link>
+          {rol !== 'participante' && !esParticipante && (
+            <Link
+              to="/admin"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                esAdmin
+                  ? 'bg-indigo-50 text-indigo-700'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+            >
+              <LayoutDashboard size={15} />
+              <span className="hidden sm:block">Admin</span>
+            </Link>
+          )}
+          {rol !== 'participante' && !esParticipante && (
+            <Link
+              to="/juez"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                esJuez
+                  ? 'bg-indigo-50 text-indigo-700'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+            >
+              <ClipboardList size={15} />
+              <span className="hidden sm:block">Juez</span>
+            </Link>
+          )}
+          {(rol === 'participante' || esParticipante) && (
+            <Link
+              to="/participante"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                esParticipante
+                  ? 'bg-indigo-50 text-indigo-700'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+            >
+              <UserRound size={15} />
+              <span className="hidden sm:block">Participante</span>
+            </Link>
+          )}
         </div>
       </div>
 

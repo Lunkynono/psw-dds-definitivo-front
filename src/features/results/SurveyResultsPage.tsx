@@ -14,7 +14,7 @@ import {
   DATETIME_INPUT_CLASS,
   datetimeLocalMasMinutos,
   datetimeLocalToIso,
-  etiquetaApertura,
+  etiquetaAperturaEncuesta,
   etiquetaCierre,
   formatFechaLocal,
   isoToDatetimeLocal,
@@ -107,8 +107,8 @@ export function SurveyResultsPage() {
     if (!surveyId) return;
     setCambiandoEstado(true);
     try {
-      await votifyApi.updateSurveyState(Number(surveyId), nuevoEstado);
-      setEncuesta((prev) => (prev ? { ...prev, estado: nuevoEstado } : prev));
+      const actualizada = await votifyApi.updateSurveyState(Number(surveyId), nuevoEstado);
+      setEncuesta(actualizada as Survey);
       toast.success(`Encuesta ${STATE_LABEL[nuevoEstado].toLowerCase()}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
@@ -121,12 +121,8 @@ export function SurveyResultsPage() {
     if (!surveyId) return;
     setCambiandoEstado(true);
     try {
-      await votifyApi.updateSurveyState(Number(surveyId), 'abierta');
-      setEncuesta((prev) =>
-        prev
-          ? { ...prev, estado: 'abierta', hora_reapertura: new Date().toISOString(), hora_cierre: null }
-          : prev
-      );
+      const actualizada = await votifyApi.updateSurveyState(Number(surveyId), 'abierta');
+      setEncuesta(actualizada as Survey);
       toast.success('Encuesta reabierta');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al reabrir');
@@ -162,30 +158,20 @@ export function SurveyResultsPage() {
       const horaCierreIso = datetimeLocalToIso(horaCierre);
 
       if (encuesta?.estado === 'abierta') {
-        await votifyApi.updateSurveySchedule(Number(surveyId), { horaCierre: horaCierreIso });
-        setEncuesta((prev) => (prev ? { ...prev, hora_cierre: horaCierreIso } : prev));
+        const actualizada = await votifyApi.updateSurveySchedule(Number(surveyId), { horaCierre: horaCierreIso });
+        setEncuesta(actualizada as Survey);
       } else {
         const aperturaFutura = horaAperturaIso && new Date(horaAperturaIso) > new Date();
         if (aperturaFutura) {
-          await votifyApi.updateSurveySchedule(Number(surveyId), {
+          const actualizada = await votifyApi.updateSurveySchedule(Number(surveyId), {
             horaApertura: horaAperturaIso,
             horaCierre: horaCierreIso
           });
-          await votifyApi.updateSurveyState(Number(surveyId), 'programada');
-          setEncuesta((prev) =>
-            prev
-              ? { ...prev, estado: 'programada', hora_apertura: horaAperturaIso, hora_cierre: horaCierreIso }
-              : prev
-          );
+          setEncuesta(actualizada as Survey);
           toast.success('Encuesta programada');
         } else {
-          await votifyApi.updateSurveySchedule(Number(surveyId), { horaCierre: horaCierreIso });
-          await votifyApi.updateSurveyState(Number(surveyId), 'abierta');
-          setEncuesta((prev) =>
-            prev
-              ? { ...prev, estado: 'abierta', hora_apertura: new Date().toISOString(), hora_cierre: horaCierreIso }
-              : prev
-          );
+          const actualizada = await votifyApi.updateSurveySchedule(Number(surveyId), { horaCierre: horaCierreIso });
+          setEncuesta(actualizada as Survey);
           toast.success('Encuesta abierta');
         }
       }
@@ -304,26 +290,21 @@ export function SurveyResultsPage() {
             <p className="text-sm text-gray-500">
               {encuesta?.competicion?.nombre} · {encuesta?.competicion?.evento?.nombre}
             </p>
-            {(encuesta?.hora_reapertura || encuesta?.hora_apertura || encuesta?.hora_cierre) && (
+            {encuesta && (
               <p className="text-xs text-gray-400 mt-0.5">
-                {encuesta.hora_reapertura ? (
-                  <span>Reabierta: {formatFechaLocal(encuesta.hora_reapertura)}</span>
-                ) : (
-                  encuesta.hora_apertura && (
-                    <span>
-                      {etiquetaApertura(encuesta.hora_apertura)}:{' '}
-                      {formatFechaLocal(encuesta.hora_apertura)}
-                    </span>
-                  )
-                )}
-                {(encuesta.hora_reapertura || encuesta.hora_apertura) && encuesta.hora_cierre && (
-                  <span> · </span>
-                )}
-                {encuesta.hora_cierre && (
-                  <span>
-                    {etiquetaCierre(encuesta.hora_cierre)}: {formatFechaLocal(encuesta.hora_cierre)}
-                  </span>
-                )}
+                <span>
+                  {etiquetaAperturaEncuesta(encuesta)}:{' '}
+                  {encuesta.hora_reapertura
+                    ? formatFechaLocal(encuesta.hora_reapertura)
+                    : encuesta.hora_apertura
+                      ? formatFechaLocal(encuesta.hora_apertura)
+                      : 'sin programar'}
+                </span>
+                <span> · </span>
+                <span>
+                  {encuesta.hora_cierre ? etiquetaCierre(encuesta.hora_cierre) : 'Cierra'}:{' '}
+                  {encuesta.hora_cierre ? formatFechaLocal(encuesta.hora_cierre) : 'sin programar'}
+                </span>
               </p>
             )}
           </div>

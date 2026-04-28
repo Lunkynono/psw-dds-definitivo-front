@@ -151,6 +151,10 @@ export class VotifyApiFacade {
     return this.http.get<ResultRow[]>(`/surveys/${surveyId}/results`);
   }
 
+  getSurveyLiveResults(surveyId: number) {
+    return this.http.get<ResultRow[]>(`/surveys/${surveyId}/results/live`);
+  }
+
   recalculateResults(surveyId: number) {
     return this.http.post<ResultRow[]>(`/surveys/${surveyId}/results/recalculate`);
   }
@@ -161,6 +165,10 @@ export class VotifyApiFacade {
 
   updateSurveyState(surveyId: number, estado: 'borrador' | 'abierta' | 'programada' | 'cerrada') {
     return this.http.patch(`/surveys/${surveyId}/state`, { estado });
+  }
+
+  deleteSurvey(surveyId: number) {
+    return this.http.delete(`/surveys/${surveyId}`);
   }
 
   updateSurveySchedule(surveyId: number, payload: { horaApertura?: string | null; horaCierre?: string | null }) {
@@ -214,6 +222,22 @@ export class VotifyApiFacade {
 
   getSurveyComments(surveyId: number) {
     return this.http.get<Array<{ texto: string; criterio: string; proyecto: string; origen: 'Público' | 'Jurado' }>>(`/surveys/${surveyId}/comments`);
+  }
+
+  getMyParticipantDashboard(userId: string) {
+    return this.http.get('/participants/me/dashboard', userId);
+  }
+
+  getParticipantDashboard(participantId: number) {
+    return this.http.get(`/participants/${participantId}/dashboard`);
+  }
+
+  getParticipantDashboardByEmail(correo: string) {
+    return this.http.get(`/participants/by-email/dashboard?correo=${encodeURIComponent(correo)}`);
+  }
+
+  updateParticipant(participantId: number, payload: unknown) {
+    return this.http.patch(`/participants/${participantId}`, payload);
   }
 }
 

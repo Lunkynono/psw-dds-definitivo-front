@@ -42,13 +42,32 @@ export class HttpClient {
 
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || `Error HTTP ${response.status}`);
+      throw new Error(this.formatErrorMessage(message, response.status));
     }
 
     if (response.status === 204) {
       return undefined as T;
     }
 
-    return response.json() as Promise<T>;
+    const text = await response.text();
+    if (!text.trim()) {
+      return undefined as T;
+    }
+
+    return JSON.parse(text) as T;
+  }
+
+  private formatErrorMessage(raw: string, status: number) {
+    if (!raw) return `Error HTTP ${status}`;
+    try {
+      const parsed = JSON.parse(raw);
+      const message = parsed?.message;
+      if (Array.isArray(message)) return message.join('. ');
+      if (typeof message === 'string') return message;
+      if (typeof parsed?.error === 'string') return parsed.error;
+    } catch {
+      // The backend may return plain text for infrastructure errors.
+    }
+    return raw;
   }
 }

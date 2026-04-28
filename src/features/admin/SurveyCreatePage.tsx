@@ -299,6 +299,7 @@ export function SurveyCreatePage() {
         descripcion: data.descripcion || undefined,
         tipoVotante: data.tipo_votante,
         peso: Number(data.peso) || 1,
+        estado: esBorrador ? 'borrador' : undefined,
         criterioIds: criteriosSeleccionados,
         horaApertura: horaAperturaIso ?? undefined,
         horaCierre: horaCierreIso ?? undefined,
