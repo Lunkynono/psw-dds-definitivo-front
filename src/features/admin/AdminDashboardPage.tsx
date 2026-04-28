@@ -97,7 +97,7 @@ export function AdminDashboardPage() {
                   {(evento as any).competicion?.[0]?.count != null ? (
                     <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full">
                       <Trophy size={10} />
-                      {(evento as any).competicion[0].count} competición{(evento as any).competicion[0].count !== 1 ? 'es' : ''}
+                      {(evento as any).competicion[0].count} {(evento as any).competicion[0].count === 1 ? 'competición' : 'competiciones'}
                     </span>
                   ) : <span />}
                   {evento.created_at && (
