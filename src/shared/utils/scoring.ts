@@ -13,7 +13,7 @@ export const RUBRICA_NIVELES = [
 export type RubricaNivelKey = (typeof RUBRICA_NIVELES)[number]['key'];
 
 export interface OpcionCriterio {
-  id: number;
+  id?: number;
   texto: string;
   orden?: number;
   peso?: number | null;
