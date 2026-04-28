@@ -1,9 +1,10 @@
-import { Camera, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Camera, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
+import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
@@ -87,11 +88,7 @@ export function EventCreatePage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-          <Link to="/admin" className="hover:text-indigo-600">Mis eventos</Link>
-          <ChevronRight size={14} />
-          <span className="text-gray-900 font-medium">Nuevo evento</span>
-        </div>
+        <Breadcrumb items={[{ label: 'Mis eventos', to: '/admin' }, { label: 'Nuevo evento' }]} />
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Crear evento</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -108,7 +105,7 @@ export function EventCreatePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
               <textarea
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
                 placeholder="Descripción del evento..."
                 {...register('descripcion')}
               />
@@ -150,14 +147,14 @@ export function EventCreatePage() {
                     placeholder="Nombre de la competición *"
                     value={comp.nombre}
                     onChange={(event) => actualizarCompeticion(idx, 'nombre', event.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
                   />
                   <input
                     type="text"
                     placeholder="Descripción (opcional)"
                     value={comp.descripcion}
                     onChange={(event) => actualizarCompeticion(idx, 'descripcion', event.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
                   />
                 </div>
               ))}

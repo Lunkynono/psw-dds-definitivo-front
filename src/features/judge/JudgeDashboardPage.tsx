@@ -48,7 +48,10 @@ export function JudgeDashboardPage() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Panel del juez</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Panel del juez</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Tus encuestas asignadas y proyectos pendientes de evaluación</p>
+      </div>
 
       {encuestas.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
@@ -63,7 +66,7 @@ export function JudgeDashboardPage() {
             const pendientes = encuesta.pendientes ?? proyectos;
 
             return (
-              <div key={encuesta.id} className="bg-white border border-gray-200 rounded-xl p-5">
+              <div key={encuesta.id} className="bg-white shadow-card border border-gray-100 rounded-xl p-5 hover:shadow-card-hover transition-all duration-200">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h2 className="font-semibold text-gray-900">{encuesta.nombre}</h2>

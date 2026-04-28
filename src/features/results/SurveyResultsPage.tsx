@@ -1,8 +1,9 @@
-import { ChevronRight, Clock, Pencil } from 'lucide-react';
+import { Clock, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../../shared/components/ui/Badge';
+import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
 import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
@@ -286,19 +287,12 @@ export function SurveyResultsPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 flex-wrap">
-          <Link to="/admin" className="hover:text-indigo-600">Mis eventos</Link>
-          <ChevronRight size={14} />
-          <Link to={`/admin/eventos/${encuesta?.competicion?.evento?.id}/editar`} className="hover:text-indigo-600">
-            {encuesta?.competicion?.evento?.nombre}
-          </Link>
-          <ChevronRight size={14} />
-          <Link to={`/admin/competiciones/${encuesta?.competicion_id}`} className="hover:text-indigo-600">
-            {encuesta?.competicion?.nombre}
-          </Link>
-          <ChevronRight size={14} />
-          <span className="text-gray-900 font-medium">{encuesta?.nombre}</span>
-        </div>
+        <Breadcrumb items={[
+          { label: 'Mis eventos', to: '/admin' },
+          { label: encuesta?.competicion?.evento?.nombre ?? '', to: `/admin/eventos/${encuesta?.competicion?.evento?.id}/editar` },
+          { label: encuesta?.competicion?.nombre ?? '', to: `/admin/competiciones/${encuesta?.competicion_id}` },
+          { label: encuesta?.nombre ?? '' }
+        ]} />
         <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{encuesta?.nombre ?? 'Resultados'}</h1>
@@ -373,15 +367,15 @@ export function SurveyResultsPage() {
           </div>
         </div>
 
-        <div className="flex gap-1 border-b border-gray-200 mb-6">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
           {TABS.map((t, i) => (
             <button
               key={t}
               onClick={() => { setTab(i); if (i === 2) cargarAsignaciones(); }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
                 tab === i
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-indigo-700 font-semibold shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               {t}
@@ -403,20 +397,32 @@ export function SurveyResultsPage() {
               </p>
             ) : (
               <div className="space-y-3">
-                {resultadosOrdenados.map((r) => {
+                {resultadosOrdenados.map((r, idx) => {
                   const puntaje = r.puntaje_manual ?? r.puntaje_calculado ?? 0;
                   const esManual = r.puntaje_manual != null;
                   const editando = r.id in editManual;
                   const nombre = r.proyecto?.nombre ?? `Proyecto ${r.proyecto_id}`;
                   const equipo = r.proyecto?.equipo?.nombre;
+                  const pos = r.posicion_final ?? idx + 1;
+
+                  const medalStyles: Record<number, { border: string; bg: string; badge: string }> = {
+                    1: { border: 'border-l-4 border-yellow-400', bg: 'bg-yellow-50/40', badge: '🥇' },
+                    2: { border: 'border-l-4 border-gray-400', bg: 'bg-gray-50/40', badge: '🥈' },
+                    3: { border: 'border-l-4 border-amber-500', bg: 'bg-amber-50/40', badge: '🥉' }
+                  };
+                  const medal = medalStyles[pos];
 
                   return (
-                    <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                    <div key={r.id} className={`bg-white border border-gray-100 rounded-xl p-4 shadow-card ${medal?.border ?? ''} ${medal?.bg ?? ''}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold flex items-center justify-center">
-                            {r.posicion_final}
-                          </span>
+                          {medal ? (
+                            <span className="text-xl leading-none">{medal.badge}</span>
+                          ) : (
+                            <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-sm font-bold flex items-center justify-center">
+                              {pos}
+                            </span>
+                          )}
                           <div>
                             <p className="font-medium text-gray-800">{nombre}</p>
                             {equipo && <p className="text-xs text-gray-500">{equipo}</p>}
@@ -434,7 +440,7 @@ export function SurveyResultsPage() {
                                 onChange={(e) =>
                                   setEditManual((prev) => ({ ...prev, [r.id]: e.target.value }))
                                 }
-                                className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                                className="w-20 border border-gray-200 rounded-xl px-2 py-1 text-sm focus:outline-none bg-gray-50"
                                 autoFocus
                               />
                               <Button
@@ -480,7 +486,7 @@ export function SurveyResultsPage() {
 
                       <div className="w-full bg-gray-100 rounded-full h-2">
                         <div
-                          className="bg-indigo-500 h-2 rounded-full transition-all"
+                          className={`h-2 rounded-full transition-all ${pos === 1 ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-indigo-400'}`}
                           style={{ width: `${(puntaje / maxPuntaje) * 100}%` }}
                         />
                       </div>

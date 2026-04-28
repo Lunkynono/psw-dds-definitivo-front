@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, PropsWithChildren } from 'react';
 import Spinner from './Spinner';
 
 const variants = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
+  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200',
   secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
   danger: 'bg-red-600 text-white hover:bg-red-700',
   ghost: 'text-gray-600 hover:bg-gray-100'
@@ -32,7 +32,7 @@ export function Button({
   return (
     <button
       disabled={disabled || loading}
-      className={`inline-flex items-center gap-2 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center gap-2 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {loading && <Spinner size="sm" />}

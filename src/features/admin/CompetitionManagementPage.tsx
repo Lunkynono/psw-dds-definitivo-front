@@ -1,9 +1,10 @@
-import { ChevronRight, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 import { Badge } from '../../shared/components/ui/Badge';
+import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
 import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
@@ -11,10 +12,8 @@ import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
 import {
   RUBRICA_NIVELES,
-  ajustarPesoOpcion,
   construirOpcionesRubrica,
   opcionesConTexto,
-  pesosOpcionesValidos,
   reescalarPesosOpciones
 } from '../../shared/utils/scoring';
 
@@ -407,17 +406,15 @@ export function CompetitionManagementPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-          <Link to="/admin" className="hover:text-indigo-600">Mis eventos</Link>
-          <ChevronRight size={14} />
-          <Link to={`/admin/eventos/${comp?.evento_id}/editar`} className="hover:text-indigo-600">{comp?.evento?.nombre}</Link>
-          <ChevronRight size={14} />
-          <span className="text-gray-900 font-medium">{comp?.nombre}</span>
-        </div>
+        <Breadcrumb items={[
+          { label: 'Mis eventos', to: '/admin' },
+          { label: comp?.evento?.nombre ?? '', to: `/admin/eventos/${comp?.evento_id}/editar` },
+          { label: comp?.nombre ?? '' }
+        ]} />
 
-        <section className="mt-6">
+        <section className="mt-2">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Equipos</h2>
+            <h2 className="text-lg font-semibold text-gray-900 border-l-4 border-indigo-500 pl-3">Equipos</h2>
             <Button size="sm" onClick={() => setModalEquipo(true)}>
               <Plus size={14} /> Añadir equipo
             </Button>
@@ -425,7 +422,7 @@ export function CompetitionManagementPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {equipos.map((equipo) => (
               <button key={equipo.id} type="button" onClick={() => abrirEditarEquipo(equipo)}
-                className="bg-white border border-gray-200 rounded-xl p-4 text-left w-full hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors">
+                className="bg-white shadow-card border border-gray-100 rounded-xl p-4 text-left w-full hover:shadow-card-hover hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200">
                 <p className="font-semibold text-gray-800">{equipo.nombre}</p>
                 {equipo.proyecto?.[0] && <p className="text-sm text-indigo-600 mt-1">{equipo.proyecto[0].nombre}</p>}
                 <div className="mt-2 space-y-0.5">
@@ -439,16 +436,18 @@ export function CompetitionManagementPage() {
           {equipos.length === 0 && <p className="text-sm text-gray-500 py-4">No hay equipos aún</p>}
         </section>
 
-        <section className="mt-8">
+        <hr className="border-gray-100 my-8" />
+
+        <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Criterios</h2>
+            <h2 className="text-lg font-semibold text-gray-900 border-l-4 border-indigo-500 pl-3">Criterios</h2>
             <Button size="sm" onClick={() => setModalCriterio(true)}>
               <Plus size={14} /> Añadir criterio
             </Button>
           </div>
           <div className="space-y-2">
             {criterios.map((criterio) => (
-              <div key={criterio.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-start justify-between hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors cursor-pointer"
+              <div key={criterio.id} className="bg-white shadow-card border border-gray-100 rounded-xl p-4 flex items-start justify-between hover:shadow-card-hover hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer"
                 role="button" tabIndex={0}
                 onClick={() => abrirEditarCriterio(criterio)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') abrirEditarCriterio(criterio); }}>
@@ -475,16 +474,18 @@ export function CompetitionManagementPage() {
           {criterios.length === 0 && <p className="text-sm text-gray-500 py-4">No hay criterios aún</p>}
         </section>
 
-        <section className="mt-8">
+        <hr className="border-gray-100 my-8" />
+
+        <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Encuestas</h2>
+            <h2 className="text-lg font-semibold text-gray-900 border-l-4 border-indigo-500 pl-3">Encuestas</h2>
             <Link to={`/admin/competiciones/${competitionId}/encuesta/nueva`}>
               <Button size="sm"><Plus size={14} /> Nueva encuesta</Button>
             </Link>
           </div>
           <div className="space-y-2">
             {encuestas.map((encuesta) => (
-              <div key={encuesta.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+              <div key={encuesta.id} className="bg-white shadow-card border border-gray-100 rounded-xl p-4 flex items-center justify-between hover:shadow-card-hover transition-all duration-200">
                 <div>
                   <p className="font-medium text-gray-800">{encuesta.nombre}</p>
                   <div className="flex gap-2 mt-1">
@@ -502,16 +503,18 @@ export function CompetitionManagementPage() {
           {encuestas.length === 0 && <p className="text-sm text-gray-500 py-4">No hay encuestas aún</p>}
         </section>
 
-        <section className="mt-8 mb-8">
+        <hr className="border-gray-100 my-8" />
+
+        <section className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Jurado</h2>
+            <h2 className="text-lg font-semibold text-gray-900 border-l-4 border-indigo-500 pl-3">Jurado</h2>
             <Button size="sm" onClick={() => setModalJuez(true)}>
               <UserPlus size={14} /> Añadir juez
             </Button>
           </div>
           <div className="space-y-2">
             {jueces.map((juez) => (
-              <div key={juez.persona_id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+              <div key={juez.persona_id} className="bg-white shadow-card border border-gray-100 rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm text-gray-800">{juez.persona?.nombre || '(sin nombre)'}</p>
                   <p className="text-xs text-gray-500">{juez.persona?.correo}</p>
@@ -730,6 +733,14 @@ function CriterionModal({
   onSave: () => void;
   editing?: boolean;
 }) {
+  const aspectosValidos = value.rubricaAspectos.filter((a) => a.texto.trim());
+  const sumaAspectos = aspectosValidos.reduce((sum, a) => sum + (Number(a.peso) || 0), 0);
+  const rubricaPesosOk = aspectosValidos.length === 0 || Math.abs(sumaAspectos - Number(value.peso)) < 0.0001;
+
+  const opcionesConPeso = opcionesConTexto(value.opciones as any);
+  const sumaOpciones = opcionesConPeso.reduce((sum: number, o: any) => sum + (Number(o.peso) || 0), 0);
+  const opcionesPesosOk = opcionesConPeso.length < 2 || Math.abs(sumaOpciones - Number(value.peso)) < 0.0001;
+
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Editar criterio' : 'Añadir criterio'} maxWidth="max-w-xl">
       <div className="space-y-4">
@@ -796,8 +807,8 @@ function CriterionModal({
                     onChange={(e) => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], texto: e.target.value }; setValue({ ...value, rubricaAspectos: a }); }}
                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={`Aspecto ${i + 1}`} />
                   <input type="number" step="0.1" min="0" value={aspecto.peso ?? 0}
-                    onChange={(e) => setValue({ ...value, rubricaAspectos: ajustarPesoOpcion(value.rubricaAspectos as any, i, Number(e.target.value), Number(value.peso)) as any })}
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Peso" />
+                    onChange={(e) => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], peso: Number(e.target.value) }; setValue({ ...value, rubricaAspectos: a }); }}
+                    className={`border rounded-lg px-3 py-2 text-sm ${!rubricaPesosOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} placeholder="Peso" />
                   <button type="button" onClick={() => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], descriptoresAbiertos: !a[i].descriptoresAbiertos }; setValue({ ...value, rubricaAspectos: a }); }}
                     className="rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-600 hover:bg-white">Desc.</button>
                   <button type="button" onClick={() => setValue({ ...value, rubricaAspectos: reescalarPesosOpciones(value.rubricaAspectos.filter((_, j) => j !== i) as any, Number(value.peso)) as any })}
@@ -829,6 +840,9 @@ function CriterionModal({
                 );
               })}
             </div>
+            {!rubricaPesosOk && (
+              <p className="text-red-500 text-xs mt-2">Suma de pesos incorrecta: {sumaAspectos.toFixed(2)} / {value.peso}</p>
+            )}
           </div>
         )}
         {['radio', 'checklist'].includes(value.tipo) && (
@@ -845,13 +859,16 @@ function CriterionModal({
                   onChange={(e) => { const ops = [...value.opciones]; ops[i] = { ...ops[i], texto: e.target.value }; setValue({ ...value, opciones: ops }); }}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={`Opción ${i + 1}`} />
                 <input type="number" step="0.1" min="0" value={opcion.peso ?? 0}
-                  onChange={(e) => setValue({ ...value, opciones: ajustarPesoOpcion(value.opciones as any, i, Number(e.target.value), Number(value.peso)) as any })}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Peso" />
+                  onChange={(e) => { const ops = [...value.opciones]; ops[i] = { ...ops[i], peso: Number(e.target.value) }; setValue({ ...value, opciones: ops }); }}
+                  className={`border rounded-lg px-3 py-2 text-sm ${!opcionesPesosOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} placeholder="Peso" />
                 {value.opciones.length > 2 && (
                   <button type="button" onClick={() => setValue({ ...value, opciones: reescalarPesosOpciones(value.opciones.filter((_, j) => j !== i) as any, Number(value.peso)) as any })} className="text-red-400"><Trash2 size={15} /></button>
                 )}
               </div>
             ))}
+            {!opcionesPesosOk && (
+              <p className="text-red-500 text-xs mt-1">Suma de pesos incorrecta: {sumaOpciones.toFixed(2)} / {value.peso}</p>
+            )}
           </div>
         )}
         {value.tipo === 'checklist' && (

@@ -1,8 +1,8 @@
-import { ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
+import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
@@ -140,13 +140,11 @@ export function JudgeVotePage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 flex-wrap">
-          <Link to="/juez" className="hover:text-indigo-600">Mis encuestas</Link>
-          <ChevronRight size={14} />
-          <span className="text-gray-700">{form.encuesta.nombre}</span>
-          <ChevronRight size={14} />
-          <span className="text-gray-900 font-medium">{form.proyecto.nombre}</span>
-        </div>
+        <Breadcrumb items={[
+          { label: 'Mis encuestas', to: '/juez' },
+          { label: form.encuesta.nombre },
+          { label: form.proyecto.nombre }
+        ]} />
         <div className="mb-6">
           <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wide">
             {form.encuesta.competicion?.nombre} · {form.encuesta.competicion?.evento?.nombre}
