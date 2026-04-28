@@ -264,7 +264,7 @@ export function JudgeVotePage() {
                                       ...prev,
                                       [criterio.id]: {
                                         ...(prev[criterio.id] ?? {}),
-                                        [grupo.aspecto]: opcion.id
+                                        [grupo.aspecto]: opcion.id!
                                       }
                                     }));
                                     setErrores((prev) => {

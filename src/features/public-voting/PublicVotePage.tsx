@@ -273,7 +273,7 @@ export function PublicVotePage() {
                                           if (!opcion) return;
                                           setRubricas((prev) => ({
                                             ...prev,
-                                            [k]: { ...(prev[k] ?? {}), [grupo.aspecto]: opcion.id }
+                                            [k]: { ...(prev[k] ?? {}), [grupo.aspecto]: opcion.id! }
                                           }));
                                         }}
                                       />
