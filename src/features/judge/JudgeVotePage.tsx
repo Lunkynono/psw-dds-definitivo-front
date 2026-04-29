@@ -118,7 +118,7 @@ export function JudgeVotePage() {
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
       toast.error(
-        msg.includes('Ya existe') ? 'Ya has votado este proyecto' : msg || 'Error al enviar el voto'
+        msg.includes('Ya existe') || msg.includes('Ya has votado') ? 'Ya has votado este proyecto' : msg || 'No se pudo enviar el voto'
       );
     } finally {
       setEnviando(false);
