@@ -16,6 +16,7 @@ import {
   ajustarPesoOpcion,
   construirOpcionesRubrica,
   opcionesConTexto,
+  pesosOpcionesValidos,
   reescalarPesosOpciones
 } from '../../shared/utils/scoring';
 
@@ -325,10 +326,20 @@ export function CompetitionManagementPage() {
         toast.error('Añade al menos un aspecto a evaluar');
         return;
       }
+      const sumaAspectos = aspectosValidos.reduce((sum, a) => sum + (Number(a.peso) || 0), 0);
+      if (Math.abs(sumaAspectos - pesoCriterio) >= 0.0001) {
+        toast.error(`Peso asignado ${sumaAspectos.toFixed(2)} de ${pesoCriterio}. Ajusta los pesos antes de guardar`);
+        return;
+      }
     } else if (['radio', 'checklist'].includes(nuevoCriterio.tipo)) {
       const opciones = opcionesConTexto(nuevoCriterio.opciones as any);
       if (opciones.length < 2) {
         toast.error('Añade al menos dos opciones');
+        return;
+      }
+      if (!pesosOpcionesValidos(pesoCriterio, opciones as any)) {
+        const sumaOpciones = opciones.reduce((sum: number, op: any) => sum + (Number(op.peso) || 0), 0);
+        toast.error(`Peso asignado ${sumaOpciones.toFixed(2)} de ${pesoCriterio}. Ajusta los pesos antes de guardar`);
         return;
       }
     }
@@ -895,6 +906,9 @@ function CriterionModal({
   const opcionesConPeso = opcionesConTexto(value.opciones as any);
   const sumaOpciones = opcionesConPeso.reduce((sum: number, o: any) => sum + (Number(o.peso) || 0), 0);
   const opcionesPesosOk = opcionesConPeso.length < 2 || Math.abs(sumaOpciones - Number(value.peso)) < 0.0001;
+  const guardarDeshabilitado =
+    (value.tipo === 'rubrica' && !rubricaPesosOk) ||
+    (['radio', 'checklist'].includes(value.tipo) && !opcionesPesosOk);
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Editar criterio' : 'Añadir criterio'} maxWidth="max-w-xl">
@@ -995,9 +1009,9 @@ function CriterionModal({
                 );
               })}
             </div>
-            {!rubricaPesosOk && (
-              <p className="text-red-500 text-xs mt-2">Suma de pesos incorrecta: {sumaAspectos.toFixed(2)} / {value.peso}</p>
-            )}
+            <p className={`text-xs mt-2 ${rubricaPesosOk ? 'text-gray-500' : 'text-red-500'}`}>
+              Asignado {sumaAspectos.toFixed(2)} de {value.peso || 0}
+            </p>
           </div>
         )}
         {['radio', 'checklist'].includes(value.tipo) && (
@@ -1021,9 +1035,9 @@ function CriterionModal({
                 )}
               </div>
             ))}
-            {!opcionesPesosOk && (
-              <p className="text-red-500 text-xs mt-1">Suma de pesos incorrecta: {sumaOpciones.toFixed(2)} / {value.peso}</p>
-            )}
+            <p className={`text-xs mt-1 ${opcionesPesosOk ? 'text-gray-500' : 'text-red-500'}`}>
+              Asignado {sumaOpciones.toFixed(2)} de {value.peso || 0}
+            </p>
           </div>
         )}
         {value.tipo === 'checklist' && (
@@ -1040,7 +1054,7 @@ function CriterionModal({
         )}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button loading={loading} onClick={onSave}>Guardar</Button>
+          <Button loading={loading} onClick={onSave} disabled={guardarDeshabilitado}>Guardar</Button>
         </div>
       </div>
     </Modal>

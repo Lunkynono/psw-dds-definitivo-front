@@ -1,4 +1,12 @@
 const pad = (value: number) => String(value).padStart(2, '0');
+const YEAR_RE = /^(\d{4,})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
+
+export const normalizarDatetimeLocalYear = (value: string): string => {
+  if (!value) return '';
+  const match = value.match(YEAR_RE);
+  if (!match) return value;
+  return `${match[1].slice(0, 4)}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+};
 
 export const isoToDatetimeLocal = (iso: string | null | undefined): string => {
   if (!iso) return '';
@@ -24,17 +32,19 @@ export const datetimeLocalMasMinutos = (value: string, minutes = 1): string => {
 };
 
 export const limitarDatetimeLocal = (value: string, min: string): string => {
-  if (!value) return '';
-  if (!min) return value;
-  return value < min ? min : value;
+  const normalizado = normalizarDatetimeLocalYear(value);
+  if (!normalizado) return '';
+  if (!min) return normalizado;
+  return normalizado < min ? min : normalizado;
 };
 
 export const DATETIME_INPUT_CLASS =
   'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 invalid:text-gray-400 invalid:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500';
 
 export const datetimeLocalToIso = (value: string): string | null => {
-  if (!value) return null;
-  const date = new Date(value);
+  const normalizado = normalizarDatetimeLocalYear(value);
+  if (!normalizado) return null;
+  const date = new Date(normalizado);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 
@@ -48,8 +58,10 @@ export const validarHorarioEncuesta = ({
   editarApertura?: boolean;
 }): string => {
   const ahora = new Date();
-  const aperturaDate = apertura ? new Date(apertura) : null;
-  const cierreDate = cierre ? new Date(cierre) : null;
+  const aperturaNormalizada = normalizarDatetimeLocalYear(apertura);
+  const cierreNormalizado = normalizarDatetimeLocalYear(cierre);
+  const aperturaDate = aperturaNormalizada ? new Date(aperturaNormalizada) : null;
+  const cierreDate = cierreNormalizado ? new Date(cierreNormalizado) : null;
 
   if (apertura && aperturaDate && Number.isNaN(aperturaDate.getTime())) {
     return 'La hora de apertura no es válida.';
@@ -74,6 +86,7 @@ export const formatFechaLocal = (iso: string | null | undefined): string => {
   return new Date(iso).toLocaleString('es', {
     day: '2-digit',
     month: '2-digit',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   });

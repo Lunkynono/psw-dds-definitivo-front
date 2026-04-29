@@ -55,44 +55,17 @@ export const ajustarPesoOpcion = (
 ): OpcionCriterio[] => {
   const total = Math.max(Number(pesoPregunta) || 0, 0);
   const pesoActualizado = Math.min(Math.max(Number(nuevoPeso) || 0, 0), total);
-  const indicesRestantes = opciones.map((_, i) => i).filter((i) => i !== index);
-  const ultimoRestante = indicesRestantes[indicesRestantes.length - 1];
-  const restantes = indicesRestantes.map((i) => opciones[i]);
-  const totalRestante = Math.max(total - pesoActualizado, 0);
-  const sumaRestantes = restantes.reduce((sum, opcion) => sum + pesoOpcion(opcion), 0);
-
-  let usados = 0;
   return opciones.map((opcion, i) => {
     if (i === index) return { ...opcion, peso: redondearPeso(pesoActualizado) };
-    const peso =
-      i === ultimoRestante
-        ? totalRestante - usados
-        : sumaRestantes > 0
-          ? (pesoOpcion(opcion) / sumaRestantes) * totalRestante
-          : totalRestante / Math.max(restantes.length, 1);
-    usados += peso;
-    return { ...opcion, peso: redondearPeso(peso) };
+    return opcion;
   });
 };
 
 export const reescalarPesosOpciones = (
   opciones: OpcionCriterio[],
-  nuevoPesoPregunta: number
+  _nuevoPesoPregunta: number
 ): OpcionCriterio[] => {
-  const total = Math.max(Number(nuevoPesoPregunta) || 0, 0);
-  if (opciones.length === 0) return opciones;
-  const sumaActual = opciones.reduce((sum, opcion) => sum + pesoOpcion(opcion), 0);
-  let usados = 0;
-  return opciones.map((opcion, index) => {
-    const peso =
-      index === opciones.length - 1
-        ? total - usados
-        : sumaActual > 0
-          ? (pesoOpcion(opcion) / sumaActual) * total
-          : total / opciones.length;
-    usados += peso;
-    return { ...opcion, peso: redondearPeso(peso) };
-  });
+  return opciones;
 };
 
 export const construirOpcionesRubrica = (
@@ -104,14 +77,17 @@ export const construirOpcionesRubrica = (
     aspectosValidos.length > 0 ? (Number(pesoPregunta) || 0) / aspectosValidos.length : 0;
 
   return aspectosValidos.flatMap((aspecto, aspectoIndex) =>
-    RUBRICA_NIVELES.map((nivel, nivelIndex) => ({
-      texto: nivel.label,
-      aspecto: aspecto.texto.trim(),
-      nivel: nivel.key,
-      descriptor: aspecto.descriptores?.[nivel.key]?.trim() || null,
-      peso: redondearPeso((Number(aspecto.peso) || pesoPorAspecto) * nivel.factor),
-      orden: aspectoIndex * RUBRICA_NIVELES.length + nivelIndex
-    }))
+    RUBRICA_NIVELES.map((nivel, nivelIndex) => {
+      const pesoAspecto = Number(aspecto.peso);
+      return {
+        texto: nivel.label,
+        aspecto: aspecto.texto.trim(),
+        nivel: nivel.key,
+        descriptor: aspecto.descriptores?.[nivel.key]?.trim() || null,
+        peso: redondearPeso((Number.isFinite(pesoAspecto) ? pesoAspecto : pesoPorAspecto) * nivel.factor),
+        orden: aspectoIndex * RUBRICA_NIVELES.length + nivelIndex
+      };
+    })
   );
 };
 

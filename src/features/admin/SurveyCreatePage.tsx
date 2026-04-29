@@ -24,6 +24,7 @@ import {
   ajustarPesoOpcion,
   construirOpcionesRubrica,
   opcionesConTexto,
+  pesosOpcionesValidos,
   reescalarPesosOpciones
 } from '../../shared/utils/scoring';
 
@@ -140,6 +141,15 @@ export function SurveyCreatePage() {
   const tipoVotante = watch('tipo_votante');
 
   const errorHorario = validarHorarioEncuesta({ apertura: horaApertura, cierre: horaCierre });
+  const aspectosValidosCriterio = nuevoCriterio.rubricaAspectos.filter((a) => a.texto.trim());
+  const sumaAspectosCriterio = aspectosValidosCriterio.reduce((sum, a) => sum + (Number(a.peso) || 0), 0);
+  const opcionesConPesoCriterio = opcionesConTexto(nuevoCriterio.opciones as any);
+  const sumaOpcionesCriterio = opcionesConPesoCriterio.reduce((sum: number, o: any) => sum + (Number(o.peso) || 0), 0);
+  const rubricaPesosOk = aspectosValidosCriterio.length === 0 || Math.abs(sumaAspectosCriterio - Number(nuevoCriterio.peso)) < 0.0001;
+  const opcionesPesosOk = opcionesConPesoCriterio.length < 2 || Math.abs(sumaOpcionesCriterio - Number(nuevoCriterio.peso)) < 0.0001;
+  const guardarCriterioDeshabilitado =
+    (nuevoCriterio.tipo === 'rubrica' && !rubricaPesosOk) ||
+    (['radio', 'checklist'].includes(nuevoCriterio.tipo) && !opcionesPesosOk);
 
   useEffect(() => {
     cargarDatos();
@@ -224,10 +234,20 @@ export function SurveyCreatePage() {
         toast.error('Añade al menos un aspecto a evaluar');
         return;
       }
+      const sumaAspectos = aspectosValidos.reduce((sum, a) => sum + (Number(a.peso) || 0), 0);
+      if (Math.abs(sumaAspectos - pesoCriterio) >= 0.0001) {
+        toast.error(`Peso asignado ${sumaAspectos.toFixed(2)} de ${pesoCriterio}. Ajusta los pesos antes de guardar`);
+        return;
+      }
     } else if (['radio', 'checklist'].includes(nuevoCriterio.tipo)) {
       const opciones = opcionesConTexto(nuevoCriterio.opciones as any);
       if (opciones.length < 2) {
         toast.error('Añade al menos dos opciones');
+        return;
+      }
+      if (!pesosOpcionesValidos(pesoCriterio, opciones as any)) {
+        const sumaOpciones = opciones.reduce((sum: number, op: any) => sum + (Number(op.peso) || 0), 0);
+        toast.error(`Peso asignado ${sumaOpciones.toFixed(2)} de ${pesoCriterio}. Ajusta los pesos antes de guardar`);
         return;
       }
     }
@@ -903,6 +923,9 @@ export function SurveyCreatePage() {
                     </div>
                   ))}
               </div>
+              <p className={`text-xs mt-2 ${rubricaPesosOk ? 'text-gray-500' : 'text-red-500'}`}>
+                Asignado {sumaAspectosCriterio.toFixed(2)} de {nuevoCriterio.peso || 0}
+              </p>
             </div>
           )}
 
@@ -975,6 +998,9 @@ export function SurveyCreatePage() {
                   )}
                 </div>
               ))}
+              <p className={`text-xs mt-1 ${opcionesPesosOk ? 'text-gray-500' : 'text-red-500'}`}>
+                Asignado {sumaOpcionesCriterio.toFixed(2)} de {nuevoCriterio.peso || 0}
+              </p>
             </div>
           )}
 
@@ -1009,7 +1035,7 @@ export function SurveyCreatePage() {
             <Button variant="secondary" onClick={() => setModalCriterio(false)}>
               Cancelar
             </Button>
-            <Button loading={guardandoCriterio} onClick={guardarCriterio}>
+            <Button loading={guardandoCriterio} onClick={guardarCriterio} disabled={guardarCriterioDeshabilitado}>
               Crear y añadir
             </Button>
           </div>
