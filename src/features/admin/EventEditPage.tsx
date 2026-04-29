@@ -1,4 +1,4 @@
-import { Camera, ChevronRight, Plus, Trophy } from 'lucide-react';
+import { Camera, ChevronRight, Plus, Trash2, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -137,6 +137,29 @@ export function EventEditPage() {
     }
   }
 
+  async function eliminarCompeticion(comp: Competition) {
+    if (!window.confirm(`Eliminar la competicion "${comp.nombre}"?`)) return;
+    try {
+      await votifyApi.deleteCompetition(comp.id);
+      setCompeticiones(competiciones.filter((item) => item.id !== comp.id));
+      toast.success('Competicion eliminada');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar competicion');
+    }
+  }
+
+  async function eliminarEvento() {
+    if (!eventId || !evento) return;
+    if (!window.confirm(`Eliminar el evento "${evento.nombre}" y todas sus competiciones?`)) return;
+    try {
+      await votifyApi.deleteEvent(Number(eventId));
+      toast.success('Evento eliminado');
+      navigate('/admin');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar evento');
+    }
+  }
+
   if (cargando) {
     return (
       <Layout>
@@ -200,7 +223,10 @@ export function EventEditPage() {
                   {...register('descripcion')}
                 />
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-between gap-2">
+                <Button type="button" variant="danger" onClick={eliminarEvento}>
+                  <Trash2 size={15} /> Eliminar evento
+                </Button>
                 <Button type="submit" loading={guardando}>Guardar cambios</Button>
               </div>
             </form>
@@ -229,7 +255,21 @@ export function EventEditPage() {
                       <h2 className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug">
                         {comp.nombre}
                       </h2>
-                      <ChevronRight size={16} className="text-gray-300 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            eliminarCompeticion(comp);
+                          }}
+                          className="text-red-400 hover:text-red-600"
+                          title="Eliminar competicion"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                        <ChevronRight size={16} className="text-gray-300 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
+                      </div>
                     </div>
                     {comp.descripcion && (
                       <p className="text-xs text-gray-400 line-clamp-2 mt-1.5">{comp.descripcion}</p>

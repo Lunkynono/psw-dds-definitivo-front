@@ -24,7 +24,6 @@ import {
   ajustarPesoOpcion,
   construirOpcionesRubrica,
   opcionesConTexto,
-  pesosOpcionesValidos,
   reescalarPesosOpciones
 } from '../../shared/utils/scoring';
 
@@ -203,6 +202,22 @@ export function SurveyCreatePage() {
       toast.error('El título es obligatorio');
       return;
     }
+    const pesoCriterio = Number(nuevoCriterio.peso);
+    if (!Number.isFinite(pesoCriterio) || pesoCriterio <= 0) {
+      toast.error('El peso debe ser mayor que cero');
+      return;
+    }
+    const rangoMin = nuevoCriterio.rango_min !== '' ? Number(nuevoCriterio.rango_min) : undefined;
+    const rangoMax = nuevoCriterio.rango_max !== '' ? Number(nuevoCriterio.rango_max) : undefined;
+    if ((rangoMin != null && rangoMin < 0) || (rangoMax != null && rangoMax < 0)) {
+      toast.error('Los rangos no pueden ser negativos');
+      return;
+    }
+    if (rangoMin != null && rangoMax != null && rangoMin > rangoMax) {
+      toast.error('El rango minimo no puede ser mayor que el maximo');
+      return;
+    }
+
     if (nuevoCriterio.tipo === 'rubrica') {
       const aspectosValidos = nuevoCriterio.rubricaAspectos.filter((a) => a.texto.trim());
       if (aspectosValidos.length === 0) {
@@ -213,10 +228,6 @@ export function SurveyCreatePage() {
       const opciones = opcionesConTexto(nuevoCriterio.opciones as any);
       if (opciones.length < 2) {
         toast.error('Añade al menos dos opciones');
-        return;
-      }
-      if (!pesosOpcionesValidos(Number(nuevoCriterio.peso), opciones as any)) {
-        toast.error(`La suma de pesos de las opciones debe ser ${nuevoCriterio.peso}`);
         return;
       }
     }
@@ -241,15 +252,9 @@ export function SurveyCreatePage() {
         titulo: nuevoCriterio.titulo.trim(),
         descripcion: nuevoCriterio.descripcion || null,
         tipo: nuevoCriterio.tipo,
-        peso: Number(nuevoCriterio.peso) || 1,
-        rangoMin:
-          nuevoCriterio.tipo === 'numerico' && nuevoCriterio.rango_min !== ''
-            ? Number(nuevoCriterio.rango_min)
-            : undefined,
-        rangoMax:
-          nuevoCriterio.tipo === 'numerico' && nuevoCriterio.rango_max !== ''
-            ? Number(nuevoCriterio.rango_max)
-            : undefined,
+        peso: pesoCriterio,
+        rangoMin: nuevoCriterio.tipo === 'numerico' ? rangoMin : undefined,
+        rangoMax: nuevoCriterio.tipo === 'numerico' ? rangoMax : undefined,
         maxSelecciones:
           nuevoCriterio.tipo === 'checklist' && !nuevoCriterio.ilimitado
             ? Number(nuevoCriterio.max_selecciones) || undefined
@@ -273,11 +278,15 @@ export function SurveyCreatePage() {
     const esBorrador = modo === 'borrador';
     setAccionGuardar(modo);
 
-    const errorHorarioSubmit = esBorrador
+    const errorHorarioSubmit = esBorrador && !horaApertura && !horaCierre
       ? ''
       : validarHorarioEncuesta({ apertura: horaApertura, cierre: horaCierre });
     if (errorHorarioSubmit) {
       toast.error(errorHorarioSubmit);
+      return;
+    }
+    if (criteriosSeleccionados.length === 0) {
+      toast.error('Selecciona al menos un criterio');
       return;
     }
     if (!esBorrador && equiposSeleccionados.length === 0) {
@@ -291,8 +300,8 @@ export function SurveyCreatePage() {
 
     setGuardando(true);
     try {
-      const horaAperturaIso = esBorrador ? null : datetimeLocalToIso(horaApertura);
-      const horaCierreIso = esBorrador ? null : datetimeLocalToIso(horaCierre);
+      const horaAperturaIso = datetimeLocalToIso(horaApertura);
+      const horaCierreIso = datetimeLocalToIso(horaCierre);
 
       await votifyApi.createSurvey(userId!, Number(competitionId), {
         nombre: data.nombre,
@@ -709,14 +718,14 @@ export function SurveyCreatePage() {
                 onChange={(e) =>
                   setNuevoCriterio({
                     ...nuevoCriterio,
-                    peso: e.target.value,
+                    peso: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)),
                     opciones: reescalarPesosOpciones(
                       nuevoCriterio.opciones as any,
-                      Number(e.target.value)
+                      Math.max(Number(e.target.value) || 0, 0)
                     ) as any,
                     rubricaAspectos: reescalarPesosOpciones(
                       nuevoCriterio.rubricaAspectos as any,
-                      Number(e.target.value)
+                      Math.max(Number(e.target.value) || 0, 0)
                     ) as any
                   })
                 }
@@ -731,9 +740,10 @@ export function SurveyCreatePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mín</label>
                 <input
                   type="number"
+                  min="0"
                   value={nuevoCriterio.rango_min}
                   onChange={(e) =>
-                    setNuevoCriterio({ ...nuevoCriterio, rango_min: e.target.value })
+                    setNuevoCriterio({ ...nuevoCriterio, rango_min: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="0"
@@ -743,9 +753,10 @@ export function SurveyCreatePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Máx</label>
                 <input
                   type="number"
+                  min="0"
                   value={nuevoCriterio.rango_max}
                   onChange={(e) =>
-                    setNuevoCriterio({ ...nuevoCriterio, rango_max: e.target.value })
+                    setNuevoCriterio({ ...nuevoCriterio, rango_max: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)) })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="10"
@@ -906,7 +917,7 @@ export function SurveyCreatePage() {
                   onClick={() =>
                     setNuevoCriterio({
                       ...nuevoCriterio,
-                      opciones: [...nuevoCriterio.opciones, { texto: '', peso: 0 }]
+                      opciones: reescalarPesosOpciones([...nuevoCriterio.opciones, { texto: '', peso: 0 }] as any, Number(nuevoCriterio.peso)) as any
                     })
                   }
                 >
@@ -986,7 +997,7 @@ export function SurveyCreatePage() {
                   min="1"
                   value={nuevoCriterio.max_selecciones}
                   onChange={(e) =>
-                    setNuevoCriterio({ ...nuevoCriterio, max_selecciones: e.target.value })
+                    setNuevoCriterio({ ...nuevoCriterio, max_selecciones: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 1, 1)) })
                   }
                   className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none"
                 />

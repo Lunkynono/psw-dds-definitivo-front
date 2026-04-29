@@ -8,11 +8,11 @@
  *   que las páginas puedan mostrarlos vía `toast.error(err.message)`.
  */
 export class HttpClient {
+  private readonly baseUrl: string;
+
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
-
-  private readonly baseUrl: string;
 
   async get<T>(path: string, userId?: string): Promise<T> {
     return this.request<T>(path, { method: 'GET' }, userId);
@@ -58,16 +58,45 @@ export class HttpClient {
   }
 
   private formatErrorMessage(raw: string, status: number) {
-    if (!raw) return `Error HTTP ${status}`;
+    if (!raw) return this.fallbackMessage(status);
     try {
       const parsed = JSON.parse(raw);
       const message = parsed?.message;
-      if (Array.isArray(message)) return message.join('. ');
-      if (typeof message === 'string') return message;
-      if (typeof parsed?.error === 'string') return parsed.error;
+      if (Array.isArray(message)) return this.normalizeMessage(message.join('. '), status);
+      if (typeof message === 'string') return this.normalizeMessage(message, status);
+      if (typeof parsed?.error === 'string') return this.normalizeMessage(parsed.error, status);
     } catch {
       // The backend may return plain text for infrastructure errors.
     }
-    return raw;
+    return this.normalizeMessage(raw, status);
+  }
+
+  private fallbackMessage(status: number) {
+    if (status === 400) return 'Revisa los datos e intentalo de nuevo';
+    if (status === 401 || status === 403) return 'No tienes permisos para hacer esta accion';
+    if (status === 404) return 'No se encontro el recurso solicitado';
+    if (status >= 500) return 'No se pudo completar la accion. Intentalo de nuevo mas tarde';
+    return 'No se pudo completar la accion';
+  }
+
+  private normalizeMessage(raw: string, status: number) {
+    const message = raw.trim();
+    if (!message) return this.fallbackMessage(status);
+    const lower = message.toLowerCase();
+
+    if (lower.includes('must be') || lower.includes('should not') || lower.includes('property ') || lower.includes('expected')) {
+      return 'Revisa los campos obligatorios y los valores introducidos';
+    }
+    if (lower.includes('duplicate key') || lower.includes('unique constraint') || lower.includes('23505')) {
+      return 'Ya existe un registro con esos datos';
+    }
+    if (lower.includes('violates foreign key') || lower.includes('foreign key constraint') || lower.includes('23503')) {
+      return 'No se puede borrar porque hay datos relacionados';
+    }
+    if (lower.includes('invalid input syntax') || lower.includes('nan')) {
+      return 'Hay un valor numerico no valido';
+    }
+
+    return message.replace(/^Error:\s*/i, '');
   }
 }

@@ -1,5 +1,5 @@
 import { CalendarClock, ClipboardList, Mail, Save, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
@@ -37,15 +37,21 @@ export function ParticipantDashboardPage() {
   const userId = useAuthStore((state) => state.userId);
   const rol = useAuthStore((state) => state.rol);
   const [data, setData] = useState<ParticipantDashboard | null>(null);
+  const [mensajeVacio, setMensajeVacio] = useState('');
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState({ nombre: '', correo: '', rol: '' });
   const [guardando, setGuardando] = useState(false);
+  const ultimaCarga = useRef('');
 
   useEffect(() => {
     async function cargar() {
       const correo = searchParams.get('correo') ?? '';
       if (!userId && !participantId && !correo) return;
+      const claveCarga = participantId ? `id:${participantId}` : correo ? `correo:${correo}` : `user:${userId}`;
+      if (ultimaCarga.current === claveCarga) return;
+      ultimaCarga.current = claveCarga;
       setCargando(true);
+      setMensajeVacio('');
       try {
         const result = participantId
           ? await votifyApi.getParticipantDashboard(Number(participantId))
@@ -60,7 +66,9 @@ export function ParticipantDashboardPage() {
           rol: dashboard.participante.rol ?? ''
         });
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'No se pudo cargar el participante');
+        const message = error instanceof Error ? error.message : 'No se pudo cargar el participante';
+        setMensajeVacio(message);
+        toast.error(message);
       } finally {
         setCargando(false);
       }
@@ -79,7 +87,9 @@ export function ParticipantDashboardPage() {
   if (!data) {
     return (
       <Layout>
-        <p className="text-sm text-gray-500 text-center py-10">No hay información de participante disponible.</p>
+        <p className="text-sm text-gray-500 text-center py-10">
+          {mensajeVacio || 'No hay informacion de participante disponible.'}
+        </p>
       </Layout>
     );
   }

@@ -26,7 +26,8 @@ export class VotifyApiFacade {
   private readonly http: HttpClient;
 
   private constructor() {
-    this.http = new HttpClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000');
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+    this.http = new HttpClient(apiBaseUrl);
   }
 
   /** Devuelve la única instancia compartida del facade. */
@@ -75,12 +76,20 @@ export class VotifyApiFacade {
     return this.http.patch<EventSummary>(`/events/${eventId}`, payload);
   }
 
+  deleteEvent(eventId: number) {
+    return this.http.delete(`/events/${eventId}`);
+  }
+
   createCompetition(eventId: number, payload: unknown) {
     return this.http.post(`/events/${eventId}/competitions`, payload);
   }
 
   updateCompetition(competitionId: number, payload: unknown) {
     return this.http.patch(`/competitions/${competitionId}`, payload);
+  }
+
+  deleteCompetition(competitionId: number) {
+    return this.http.delete(`/competitions/${competitionId}`);
   }
 
   getCompetitionManagement(competitionId: number) {

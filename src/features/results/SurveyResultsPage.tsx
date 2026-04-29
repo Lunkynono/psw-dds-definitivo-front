@@ -132,12 +132,17 @@ export function SurveyResultsPage() {
   }
 
   function abrirModalHorario() {
+    const aperturaGuardada = isoToDatetimeLocal(encuesta?.hora_apertura);
+    const cierreGuardado = isoToDatetimeLocal(encuesta?.hora_cierre);
+    const aperturaEsFutura = encuesta?.hora_apertura ? new Date(encuesta.hora_apertura) > new Date() : false;
+    const cierreEsFuturo = encuesta?.hora_cierre ? new Date(encuesta.hora_cierre) > new Date() : false;
+
     if (encuesta?.estado !== 'abierta') {
-      setHoraApertura(isoToDatetimeLocal(encuesta?.hora_apertura));
+      setHoraApertura(aperturaEsFutura ? aperturaGuardada : '');
     } else {
       setHoraApertura('');
     }
-    setHoraCierre(isoToDatetimeLocal(encuesta?.hora_cierre));
+    setHoraCierre(cierreEsFuturo ? cierreGuardado : '');
     setModalAbrir(true);
   }
 
@@ -315,7 +320,7 @@ export function SurveyResultsPage() {
             )}
             {estado === 'borrador' && (
               <Button size="sm" onClick={abrirModalHorario}>
-                Abrir
+                Publicar
               </Button>
             )}
             {estado === 'abierta' && (
@@ -613,7 +618,9 @@ export function SurveyResultsPage() {
             ? 'Cierre automático'
             : estado === 'programada'
               ? 'Editar horario'
-              : 'Abrir encuesta'
+              : estado === 'borrador'
+                ? 'Publicar encuesta'
+                : 'Abrir encuesta'
         }
       >
         <div className="space-y-3">
@@ -705,7 +712,9 @@ export function SurveyResultsPage() {
             <Button loading={cambiandoEstado} onClick={confirmarAbrir} disabled={!!errorHorarioModal}>
               {estado !== 'abierta' && horaApertura && new Date(horaApertura) > new Date()
                 ? 'Programar'
-                : 'Guardar'}
+                : estado === 'borrador'
+                  ? 'Publicar'
+                  : 'Guardar'}
             </Button>
           </div>
         </div>

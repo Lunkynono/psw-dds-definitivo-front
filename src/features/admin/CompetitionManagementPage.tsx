@@ -13,6 +13,7 @@ import { Layout } from '../../shared/layout/Layout';
 import { etiquetaAperturaEncuesta, etiquetaCierre, formatFechaLocal } from '../../shared/utils/dateTime';
 import {
   RUBRICA_NIVELES,
+  ajustarPesoOpcion,
   construirOpcionesRubrica,
   opcionesConTexto,
   reescalarPesosOpciones
@@ -173,6 +174,9 @@ export function CompetitionManagementPage() {
       return toast.error('Nombre del equipo y proyecto son obligatorios');
     }
     const participantesValidos = nuevoEquipo.participantes.filter((p) => p.nombre.trim() || p.correo.trim() || p.rol.trim());
+    if (participantesValidos.length === 0) {
+      return toast.error('Anade al menos un participante');
+    }
     if (participantesValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
     }
@@ -219,7 +223,13 @@ export function CompetitionManagementPage() {
 
   async function guardarEdicionEquipo() {
     if (!equipoEditando) return;
-    const partsValidos = equipoEditando.participantes.filter((p) => p.nombre.trim() || p.correo.trim());
+    if (!equipoEditando.nombre.trim() || !equipoEditando.proyectoNombre.trim()) {
+      return toast.error('Nombre del equipo y proyecto son obligatorios');
+    }
+    const partsValidos = equipoEditando.participantes.filter((p) => p.nombre.trim() || p.correo.trim() || p.rol.trim());
+    if (partsValidos.length === 0) {
+      return toast.error('Anade al menos un participante');
+    }
     if (partsValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
     }
@@ -295,6 +305,18 @@ export function CompetitionManagementPage() {
 
   async function guardarCriterio() {
     if (!competitionId) return;
+    const pesoCriterio = Number(nuevoCriterio.peso);
+    if (!Number.isFinite(pesoCriterio) || pesoCriterio <= 0) {
+      return toast.error('El peso debe ser mayor que cero');
+    }
+    const rangoMin = nuevoCriterio.rango_min !== '' ? Number(nuevoCriterio.rango_min) : undefined;
+    const rangoMax = nuevoCriterio.rango_max !== '' ? Number(nuevoCriterio.rango_max) : undefined;
+    if ((rangoMin != null && rangoMin < 0) || (rangoMax != null && rangoMax < 0)) {
+      return toast.error('Los rangos no pueden ser negativos');
+    }
+    if (rangoMin != null && rangoMax != null && rangoMin > rangoMax) {
+      return toast.error('El rango minimo no puede ser mayor que el maximo');
+    }
     if (!nuevoCriterio.titulo.trim()) return toast.error('El título es obligatorio');
 
     if (nuevoCriterio.tipo === 'rubrica') {
@@ -329,9 +351,9 @@ export function CompetitionManagementPage() {
         titulo: nuevoCriterio.titulo.trim(),
         descripcion: nuevoCriterio.descripcion || null,
         tipo: nuevoCriterio.tipo,
-        peso: Number(nuevoCriterio.peso) || 1,
-        rangoMin: nuevoCriterio.tipo === 'numerico' && nuevoCriterio.rango_min !== '' ? Number(nuevoCriterio.rango_min) : undefined,
-        rangoMax: nuevoCriterio.tipo === 'numerico' && nuevoCriterio.rango_max !== '' ? Number(nuevoCriterio.rango_max) : undefined,
+        peso: pesoCriterio,
+        rangoMin: nuevoCriterio.tipo === 'numerico' ? rangoMin : undefined,
+        rangoMax: nuevoCriterio.tipo === 'numerico' ? rangoMax : undefined,
         maxSelecciones: nuevoCriterio.tipo === 'checklist' && !nuevoCriterio.ilimitado ? Number(nuevoCriterio.max_selecciones) || undefined : undefined,
         opciones
       };
@@ -395,7 +417,18 @@ export function CompetitionManagementPage() {
   }
 
   async function eliminarEncuesta(encuesta: Survey) {
-    if (encuesta.estado !== 'cerrada') return;
+    if (!['borrador', 'cerrada'].includes(encuesta.estado)) return;
+    if (encuesta.estado === 'borrador') {
+      if (!window.confirm(`Eliminar la encuesta "${encuesta.nombre}"?`)) return;
+      try {
+        await votifyApi.deleteSurvey(encuesta.id);
+        setEncuestas(encuestas.filter((item) => item.id !== encuesta.id));
+        toast.success('Encuesta eliminada');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Error al eliminar encuesta');
+      }
+      return;
+    }
     if (!window.confirm(`¿Eliminar la encuesta cerrada "${encuesta.nombre}"?`)) return;
     try {
       await votifyApi.deleteSurvey(encuesta.id);
@@ -533,12 +566,12 @@ export function CompetitionManagementPage() {
                   <Link to={`/admin/encuestas/${encuesta.id}/resultados`} className="text-sm text-indigo-600 hover:underline">
                     Detalles
                   </Link>
-                  {encuesta.estado === 'cerrada' && (
+                  {['borrador', 'cerrada'].includes(encuesta.estado) && (
                     <button
                       type="button"
                       onClick={() => eliminarEncuesta(encuesta)}
                       className="text-red-400 hover:text-red-600"
-                      title="Eliminar encuesta cerrada"
+                      title="Eliminar encuesta"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -611,28 +644,85 @@ export function CompetitionManagementPage() {
               <textarea rows={2} value={equipoEditando.proyectoDesc} onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoDesc: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Participantes</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Participantes</label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setEquipoEditando({
+                    ...equipoEditando,
+                    participantes: [...equipoEditando.participantes, { nombre: '', correo: '', rol: '' }]
+                  })}
+                >
+                  <Plus size={13} /> Anadir
+                </Button>
+              </div>
               <div className="space-y-2">
                 {equipoEditando.participantes.map((p, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/40 transition-all group">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold text-indigo-700">{(p.nombre || p.correo).charAt(0).toUpperCase()}</span>
-                    </div>
-                    <Link
-                      to={p.id ? `/admin/participantes/${p.id}` : '#'}
-                      className="flex-1 min-w-0"
-                    >
-                      <p className="text-sm font-medium text-gray-800 group-hover:text-indigo-700 truncate">{p.nombre || p.correo}</p>
-                      {p.rol && <p className="text-xs text-gray-400 truncate">{p.rol}</p>}
-                    </Link>
-                    {equipoEditando.participantes.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setEquipoEditando({ ...equipoEditando, participantes: equipoEditando.participantes.filter((_, j) => j !== i) })}
-                        className="text-red-300 hover:text-red-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                  <div key={i}>
+                    {p.id ? (
+                      <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/40 transition-all group">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-semibold text-indigo-700">{(p.nombre || p.correo).charAt(0).toUpperCase()}</span>
+                        </div>
+                        <Link to={`/admin/participantes/${p.id}`} className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 group-hover:text-indigo-700 truncate">{p.nombre || p.correo}</p>
+                          {p.rol && <p className="text-xs text-gray-400 truncate">{p.rol}</p>}
+                        </Link>
+                        {equipoEditando.participantes.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setEquipoEditando({ ...equipoEditando, participantes: equipoEditando.participantes.filter((_, j) => j !== i) })}
+                            className="text-red-300 hover:text-red-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 flex-wrap rounded-xl border border-gray-100 bg-gray-50 p-2">
+                        <input
+                          value={p.nombre}
+                          onChange={(event) => {
+                            const participantes = [...equipoEditando.participantes];
+                            participantes[i] = { ...participantes[i], nombre: event.target.value };
+                            setEquipoEditando({ ...equipoEditando, participantes });
+                          }}
+                          className="flex-1 min-w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="Nombre *"
+                        />
+                        <input
+                          type="email"
+                          value={p.correo}
+                          onChange={(event) => {
+                            const participantes = [...equipoEditando.participantes];
+                            participantes[i] = { ...participantes[i], correo: event.target.value };
+                            setEquipoEditando({ ...equipoEditando, participantes });
+                          }}
+                          className="flex-1 min-w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="Correo *"
+                        />
+                        <input
+                          value={p.rol}
+                          onChange={(event) => {
+                            const participantes = [...equipoEditando.participantes];
+                            participantes[i] = { ...participantes[i], rol: event.target.value };
+                            setEquipoEditando({ ...equipoEditando, participantes });
+                          }}
+                          className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="Rol *"
+                        />
+                        {equipoEditando.participantes.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setEquipoEditando({ ...equipoEditando, participantes: equipoEditando.participantes.filter((_, j) => j !== i) })}
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -836,9 +926,9 @@ function CriterionModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Peso</label>
             <input type="number" step="0.1" min="0.1" value={value.peso}
               onChange={(e) => setValue({
-                ...value, peso: e.target.value,
-                opciones: reescalarPesosOpciones(value.opciones as any, Number(e.target.value)) as any,
-                rubricaAspectos: reescalarPesosOpciones(value.rubricaAspectos as any, Number(e.target.value)) as any
+                ...value, peso: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)),
+                opciones: reescalarPesosOpciones(value.opciones as any, Math.max(Number(e.target.value) || 0, 0)) as any,
+                rubricaAspectos: reescalarPesosOpciones(value.rubricaAspectos as any, Math.max(Number(e.target.value) || 0, 0)) as any
               })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>
@@ -846,11 +936,11 @@ function CriterionModal({
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Mín</label>
-              <input type="number" value={value.rango_min} onChange={(e) => setValue({ ...value, rango_min: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="0" />
+              <input type="number" min="0" value={value.rango_min} onChange={(e) => setValue({ ...value, rango_min: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)) })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="0" />
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Máx</label>
-              <input type="number" value={value.rango_max} onChange={(e) => setValue({ ...value, rango_max: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="10" />
+              <input type="number" min="0" value={value.rango_max} onChange={(e) => setValue({ ...value, rango_max: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 0, 0)) })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="10" />
             </div>
           </div>
         )}
@@ -872,7 +962,7 @@ function CriterionModal({
                     onChange={(e) => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], texto: e.target.value }; setValue({ ...value, rubricaAspectos: a }); }}
                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={`Aspecto ${i + 1}`} />
                   <input type="number" step="0.1" min="0" value={aspecto.peso ?? 0}
-                    onChange={(e) => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], peso: Number(e.target.value) }; setValue({ ...value, rubricaAspectos: a }); }}
+                    onChange={(e) => setValue({ ...value, rubricaAspectos: ajustarPesoOpcion(value.rubricaAspectos as any, i, Number(e.target.value), Number(value.peso)) as any })}
                     className={`border rounded-lg px-3 py-2 text-sm ${!rubricaPesosOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} placeholder="Peso" />
                   <button type="button" onClick={() => { const a = [...value.rubricaAspectos]; a[i] = { ...a[i], descriptoresAbiertos: !a[i].descriptoresAbiertos }; setValue({ ...value, rubricaAspectos: a }); }}
                     className="rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-600 hover:bg-white">Desc.</button>
@@ -914,7 +1004,7 @@ function CriterionModal({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-gray-700">Opciones</label>
-              <Button type="button" size="sm" variant="secondary" onClick={() => setValue({ ...value, opciones: [...value.opciones, { texto: '', peso: 0 }] })}>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setValue({ ...value, opciones: reescalarPesosOpciones([...value.opciones, { texto: '', peso: 0 }] as any, Number(value.peso)) as any })}>
                 <Plus size={13} /> Opción
               </Button>
             </div>
@@ -924,7 +1014,7 @@ function CriterionModal({
                   onChange={(e) => { const ops = [...value.opciones]; ops[i] = { ...ops[i], texto: e.target.value }; setValue({ ...value, opciones: ops }); }}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={`Opción ${i + 1}`} />
                 <input type="number" step="0.1" min="0" value={opcion.peso ?? 0}
-                  onChange={(e) => { const ops = [...value.opciones]; ops[i] = { ...ops[i], peso: Number(e.target.value) }; setValue({ ...value, opciones: ops }); }}
+                  onChange={(e) => setValue({ ...value, opciones: ajustarPesoOpcion(value.opciones as any, i, Number(e.target.value), Number(value.peso)) as any })}
                   className={`border rounded-lg px-3 py-2 text-sm ${!opcionesPesosOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} placeholder="Peso" />
                 {value.opciones.length > 2 && (
                   <button type="button" onClick={() => setValue({ ...value, opciones: reescalarPesosOpciones(value.opciones.filter((_, j) => j !== i) as any, Number(value.peso)) as any })} className="text-red-400"><Trash2 size={15} /></button>
@@ -944,7 +1034,7 @@ function CriterionModal({
               Ilimitado
             </label>
             {!value.ilimitado && (
-              <input type="number" min="1" value={value.max_selecciones} onChange={(e) => setValue({ ...value, max_selecciones: e.target.value })} className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+              <input type="number" min="1" value={value.max_selecciones} onChange={(e) => setValue({ ...value, max_selecciones: e.target.value === '' ? '' : String(Math.max(Number(e.target.value) || 1, 1)) })} className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm" />
             )}
           </div>
         )}
