@@ -14,6 +14,7 @@ import { etiquetaAperturaEncuesta, etiquetaCierre, formatFechaLocal } from '../.
 import {
   RUBRICA_NIVELES,
   ajustarPesoOpcion,
+  agruparRubrica,
   construirOpcionesRubrica,
   opcionesConTexto,
   pesosOpcionesValidos,
@@ -70,7 +71,15 @@ type Criterion = {
   peso: number;
   rango_min?: number | null;
   rango_max?: number | null;
-  criterio_opcion?: Array<{ id: number; texto: string }>;
+  criterio_opcion?: Array<{
+    id: number;
+    texto: string;
+    orden?: number;
+    peso?: number | null;
+    aspecto?: string | null;
+    nivel?: string | null;
+    descriptor?: string | null;
+  }>;
 };
 
 type Survey = {
@@ -152,7 +161,7 @@ export function CompetitionManagementPage() {
       const summary = await votifyApi.getCompetitionManagement(Number(competitionId)) as CompetitionSummary;
 
       if (summary.competition.evento?.organizador_id && summary.competition.evento.organizador_id !== userId) {
-        toast.error('Sin acceso');
+        toast.error('No tienes permisos para gestionar esta competición');
         navigate('/admin');
         return;
       }
@@ -163,7 +172,7 @@ export function CompetitionManagementPage() {
       setEncuestas(summary.surveys ?? []);
       setJueces(summary.judges ?? []);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cargar');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los datos');
     } finally {
       setCargando(false);
     }
@@ -176,7 +185,7 @@ export function CompetitionManagementPage() {
     }
     const participantesValidos = nuevoEquipo.participantes.filter((p) => p.nombre.trim() || p.correo.trim() || p.rol.trim());
     if (participantesValidos.length === 0) {
-      return toast.error('Anade al menos un participante');
+      return toast.error('Añade al menos un participante');
     }
     if (participantesValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
@@ -203,7 +212,7 @@ export function CompetitionManagementPage() {
       setModalEquipo(false);
       toast.success('Equipo añadido');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al añadir equipo');
+      toast.error(error instanceof Error ? error.message : 'No se pudo añadir el equipo');
     } finally {
       setGuardandoEquipo(false);
     }
@@ -229,7 +238,7 @@ export function CompetitionManagementPage() {
     }
     const partsValidos = equipoEditando.participantes.filter((p) => p.nombre.trim() || p.correo.trim() || p.rol.trim());
     if (partsValidos.length === 0) {
-      return toast.error('Anade al menos un participante');
+      return toast.error('Añade al menos un participante');
     }
     if (partsValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
@@ -248,7 +257,7 @@ export function CompetitionManagementPage() {
       setEquipoEditando(null);
       toast.success('Equipo actualizado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar equipo');
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el equipo');
     } finally {
       setGuardandoEdicionEquipo(false);
     }
@@ -265,7 +274,7 @@ export function CompetitionManagementPage() {
       setEquipoEditando(null);
       toast.success('Equipo eliminado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar equipo');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el equipo');
     } finally {
       setGuardandoEdicionEquipo(false);
     }
@@ -274,16 +283,15 @@ export function CompetitionManagementPage() {
   function abrirEditarCriterio(criterio: Criterion) {
     const opcionesOrdenadas = [...(criterio.criterio_opcion ?? [])].sort((a, b) => (a as any).orden - (b as any).orden);
     const rubricaAspectos = criterio.tipo === 'rubrica'
-      ? Object.values(
-          opcionesOrdenadas.reduce((acc: Record<string, AspectoDraft>, op: any) => {
-            if (!acc[op.aspecto]) {
-              acc[op.aspecto] = { texto: op.aspecto, peso: 0, descriptores: {}, descriptoresAbiertos: false };
-            }
-            if (op.peso > acc[op.aspecto].peso) acc[op.aspecto].peso = Number(op.peso) || 0;
-            if (op.nivel && op.descriptor) acc[op.aspecto].descriptores[op.nivel] = op.descriptor;
+      ? agruparRubrica(opcionesOrdenadas as any).map((grupo) => ({
+          texto: grupo.aspecto,
+          peso: Math.max(...grupo.opciones.map((opcion) => Number(opcion.peso) || 0), 0),
+          descriptores: grupo.opciones.reduce<Record<string, string>>((acc, opcion) => {
+            if (opcion.nivel && opcion.descriptor) acc[opcion.nivel] = opcion.descriptor;
             return acc;
-          }, {})
-        )
+          }, {}),
+          descriptoresAbiertos: false
+        }))
       : nuevoCriterio.rubricaAspectos;
 
     setCriterioEditando(criterio);
@@ -316,7 +324,7 @@ export function CompetitionManagementPage() {
       return toast.error('Los rangos no pueden ser negativos');
     }
     if (rangoMin != null && rangoMax != null && rangoMin > rangoMax) {
-      return toast.error('El rango minimo no puede ser mayor que el maximo');
+      return toast.error('El rango mínimo no puede ser mayor que el máximo');
     }
     if (!nuevoCriterio.titulo.trim()) return toast.error('El título es obligatorio');
 
@@ -381,7 +389,7 @@ export function CompetitionManagementPage() {
       setModalCriterio(false);
       toast.success(criterioEditando ? 'Criterio actualizado' : 'Criterio añadido');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al añadir criterio');
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el criterio');
     } finally {
       setGuardandoCriterio(false);
     }
@@ -401,7 +409,7 @@ export function CompetitionManagementPage() {
       setModalJuez(false);
       toast.success('Juez añadido');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al añadir juez');
+      toast.error(error instanceof Error ? error.message : 'No se pudo añadir el juez');
     } finally {
       setGuardandoJuez(false);
     }
@@ -414,7 +422,7 @@ export function CompetitionManagementPage() {
       setJueces(jueces.filter((juez) => juez.persona_id !== personaId));
       toast.success('Juez eliminado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar juez');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el juez');
     }
   }
 
@@ -423,7 +431,7 @@ export function CompetitionManagementPage() {
       await votifyApi.deleteCriterion(criterionId);
       setCriterios(criterios.filter((criterio) => criterio.id !== criterionId));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar criterio');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el criterio');
     }
   }
 
@@ -436,7 +444,7 @@ export function CompetitionManagementPage() {
         setEncuestas(encuestas.filter((item) => item.id !== encuesta.id));
         toast.success('Encuesta eliminada');
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Error al eliminar encuesta');
+        toast.error(error instanceof Error ? error.message : 'No se pudo eliminar la encuesta');
       }
       return;
     }
@@ -446,7 +454,7 @@ export function CompetitionManagementPage() {
       setEncuestas(encuestas.filter((item) => item.id !== encuesta.id));
       toast.success('Encuesta eliminada');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar encuesta');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar la encuesta');
     }
   }
 
@@ -882,6 +890,33 @@ type CriterionDraft = {
   rubricaAspectos: AspectoDraft[];
 };
 
+function opcionesIniciales(peso: string) {
+  const total = Number(peso);
+  return [{ texto: '', peso: 0 }, { texto: '', peso: Number.isFinite(total) && total > 0 ? total : 1 }];
+}
+
+function aspectosIniciales(peso: string): AspectoDraft[] {
+  const total = Number(peso);
+  const pesoAspecto = (Number.isFinite(total) && total > 0 ? total : 1) / 2;
+  return [
+    { texto: 'Calidad técnica', peso: pesoAspecto, descriptores: {}, descriptoresAbiertos: false },
+    { texto: 'Presentación', peso: pesoAspecto, descriptores: {}, descriptoresAbiertos: false }
+  ];
+}
+
+function cambiarTipoCriterio(value: CriterionDraft, tipo: CriterionType): CriterionDraft {
+  return {
+    ...value,
+    tipo,
+    rango_min: '',
+    rango_max: '',
+    max_selecciones: '',
+    ilimitado: true,
+    opciones: opcionesIniciales(value.peso),
+    rubricaAspectos: aspectosIniciales(value.peso)
+  };
+}
+
 function CriterionModal({
   open,
   onClose,
@@ -924,11 +959,7 @@ function CriterionModal({
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select value={value.tipo} onChange={(e) => setValue({
-              ...value, tipo: e.target.value as CriterionType,
-              opciones: reescalarPesosOpciones(value.opciones as any, Number(value.peso)) as any,
-              rubricaAspectos: reescalarPesosOpciones(value.rubricaAspectos as any, Number(value.peso)) as any
-            })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <select value={value.tipo} onChange={(e) => setValue(cambiarTipoCriterio(value, e.target.value as CriterionType))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
               <option value="numerico">Numérico</option>
               <option value="radio">Radio</option>
               <option value="checklist">Checklist</option>

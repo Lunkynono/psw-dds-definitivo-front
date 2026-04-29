@@ -148,7 +148,7 @@ export function AccessPage() {
       setCompeticiones([]);
       setModalParticipante(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al inscribirse');
+      toast.error(error instanceof Error ? error.message : 'No se pudo completar la inscripción');
     } finally {
       setGuardando(false);
     }

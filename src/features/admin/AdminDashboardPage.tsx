@@ -20,7 +20,7 @@ export function AdminDashboardPage() {
       try {
         setEventos(await votifyApi.getAdminEvents(userId));
       } catch {
-        toast.error('Error al cargar eventos');
+        toast.error('No se pudieron cargar los eventos');
       } finally {
         setCargando(false);
       }

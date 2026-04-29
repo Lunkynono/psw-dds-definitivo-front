@@ -45,7 +45,7 @@ export function EventEditPage() {
         ]);
 
         if (ev.organizador_id && ev.organizador_id !== userId) {
-          toast.error('Sin acceso');
+          toast.error('No tienes permisos para gestionar este evento');
           navigate('/admin');
           return;
         }
@@ -54,7 +54,7 @@ export function EventEditPage() {
         setCompeticiones(comps as Competition[]);
         reset({ nombre: ev.nombre, lugar: ev.lugar || '', descripcion: ev.descripcion || '' });
       } catch {
-        toast.error('Error al cargar el evento');
+        toast.error('No se pudo cargar el evento');
       } finally {
         setCargando(false);
       }
@@ -74,7 +74,7 @@ export function EventEditPage() {
       });
       toast.success('Evento actualizado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al guardar');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron guardar los cambios');
     } finally {
       setGuardando(false);
     }
@@ -93,7 +93,7 @@ export function EventEditPage() {
       setModalCompeticion(false);
       toast.success('Competición añadida');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al añadir competición');
+      toast.error(error instanceof Error ? error.message : 'No se pudo añadir la competición');
     }
   }
 
@@ -119,7 +119,7 @@ export function EventEditPage() {
       setEvento((prev) => prev ? { ...prev, imagen_url: imagenUrl } : prev);
       toast.success('Imagen actualizada');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al subir imagen');
+      toast.error(error instanceof Error ? error.message : 'No se pudo subir la imagen');
     } finally {
       setSubiendoImagen(false);
     }
@@ -133,30 +133,30 @@ export function EventEditPage() {
       });
       toast.success('Guardado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al guardar');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron guardar los cambios');
     }
   }
 
   async function eliminarCompeticion(comp: Competition) {
-    if (!window.confirm(`Eliminar la competicion "${comp.nombre}"?`)) return;
+    if (!window.confirm(`¿Eliminar la competición "${comp.nombre}"?`)) return;
     try {
       await votifyApi.deleteCompetition(comp.id);
       setCompeticiones(competiciones.filter((item) => item.id !== comp.id));
       toast.success('Competicion eliminada');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar competicion');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar la competición');
     }
   }
 
   async function eliminarEvento() {
     if (!eventId || !evento) return;
-    if (!window.confirm(`Eliminar el evento "${evento.nombre}" y todas sus competiciones?`)) return;
+    if (!window.confirm(`¿Eliminar el evento "${evento.nombre}" y todas sus competiciones?`)) return;
     try {
       await votifyApi.deleteEvent(Number(eventId));
       toast.success('Evento eliminado');
       navigate('/admin');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar evento');
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el evento');
     }
   }
 
@@ -264,7 +264,7 @@ export function EventEditPage() {
                             eliminarCompeticion(comp);
                           }}
                           className="text-red-400 hover:text-red-600"
-                          title="Eliminar competicion"
+                          title="Eliminar competición"
                         >
                           <Trash2 size={15} />
                         </button>

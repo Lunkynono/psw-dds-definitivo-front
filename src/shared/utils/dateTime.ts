@@ -1,6 +1,8 @@
 const pad = (value: number) => String(value).padStart(2, '0');
 const YEAR_RE = /^(\d{4,})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
 
+export const MAX_DATETIME_LOCAL = '9999-12-31T23:59';
+
 export const normalizarDatetimeLocalYear = (value: string): string => {
   if (!value) return '';
   const match = value.match(YEAR_RE);

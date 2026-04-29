@@ -13,9 +13,11 @@ import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
 import {
   DATETIME_INPUT_CLASS,
+  MAX_DATETIME_LOCAL,
   datetimeLocalMasMinutos,
   datetimeLocalToIso,
   limitarDatetimeLocal,
+  normalizarDatetimeLocalYear,
   nowDatetimeLocal,
   validarHorarioEncuesta
 } from '../../shared/utils/dateTime';
@@ -111,6 +113,33 @@ const CRITERION_DRAFT_EMPTY: CriterionDraft = {
   ]
 };
 
+function opcionesIniciales(peso: string) {
+  const total = Number(peso);
+  return [{ texto: '', peso: 0 }, { texto: '', peso: Number.isFinite(total) && total > 0 ? total : 1 }];
+}
+
+function aspectosIniciales(peso: string): AspectoDraft[] {
+  const total = Number(peso);
+  const pesoAspecto = (Number.isFinite(total) && total > 0 ? total : 1) / 2;
+  return [
+    { texto: 'Calidad técnica', peso: pesoAspecto, descriptores: {} },
+    { texto: 'Presentación', peso: pesoAspecto, descriptores: {} }
+  ];
+}
+
+function cambiarTipoCriterio(value: CriterionDraft, tipo: CriterionType): CriterionDraft {
+  return {
+    ...value,
+    tipo,
+    rango_min: '',
+    rango_max: '',
+    max_selecciones: '',
+    ilimitado: true,
+    opciones: opcionesIniciales(value.peso),
+    rubricaAspectos: aspectosIniciales(value.peso)
+  };
+}
+
 export function SurveyCreatePage() {
   const { competitionId } = useParams();
   const userId = useAuthStore((state) => state.userId);
@@ -139,6 +168,7 @@ export function SurveyCreatePage() {
     formState: { errors }
   } = useForm<SurveyForm>({ defaultValues: { tipo_votante: 'juez', peso: 1 } });
   const tipoVotante = watch('tipo_votante');
+  const requiereJurado = tipoVotante !== 'publico';
 
   const errorHorario = validarHorarioEncuesta({ apertura: horaApertura, cierre: horaCierre });
   const aspectosValidosCriterio = nuevoCriterio.rubricaAspectos.filter((a) => a.texto.trim());
@@ -155,6 +185,10 @@ export function SurveyCreatePage() {
     cargarDatos();
   }, [competitionId]);
 
+  useEffect(() => {
+    if (!requiereJurado) setJuecesSeleccionados([]);
+  }, [requiereJurado]);
+
   async function cargarDatos() {
     if (!competitionId) return;
     setCargando(true);
@@ -168,7 +202,7 @@ export function SurveyCreatePage() {
         summary.competition.evento?.organizador_id &&
         summary.competition.evento.organizador_id !== userId
       ) {
-        toast.error('Sin acceso');
+        toast.error('No tienes permisos para gestionar esta competición');
         navigate('/admin');
         return;
       }
@@ -183,7 +217,7 @@ export function SurveyCreatePage() {
       setEquiposSeleccionados(eqs.map((e) => e.id));
       setJuecesSeleccionados(jus.map((j) => j.id));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cargar');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los datos');
     } finally {
       setCargando(false);
     }
@@ -224,7 +258,7 @@ export function SurveyCreatePage() {
       return;
     }
     if (rangoMin != null && rangoMax != null && rangoMin > rangoMax) {
-      toast.error('El rango minimo no puede ser mayor que el maximo');
+      toast.error('El rango mínimo no puede ser mayor que el máximo');
       return;
     }
 
@@ -288,7 +322,7 @@ export function SurveyCreatePage() {
       setModalCriterio(false);
       toast.success('Criterio creado y añadido');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al crear criterio');
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear el criterio');
     } finally {
       setGuardandoCriterio(false);
     }
@@ -333,7 +367,7 @@ export function SurveyCreatePage() {
         horaApertura: horaAperturaIso ?? undefined,
         horaCierre: horaCierreIso ?? undefined,
         equipoIds: esBorrador ? undefined : equiposSeleccionados,
-        juecesIds: esBorrador ? undefined : juecesSeleccionados
+        juecesIds: esBorrador || !requiereJurado ? undefined : juecesSeleccionados
       });
 
       const msg = esBorrador
@@ -344,7 +378,7 @@ export function SurveyCreatePage() {
       toast.success(msg);
       navigate(`/admin/competiciones/${competitionId}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al crear la encuesta');
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear la encuesta');
     } finally {
       setGuardando(false);
     }
@@ -394,7 +428,11 @@ export function SurveyCreatePage() {
                 <input
                   type="datetime-local"
                   min={nowDatetimeLocal()}
+                  max={MAX_DATETIME_LOCAL}
                   value={horaApertura}
+                  onInput={(e) => {
+                    e.currentTarget.value = normalizarDatetimeLocalYear(e.currentTarget.value);
+                  }}
                   onChange={(e) => {
                     const apertura = limitarDatetimeLocal(e.target.value, nowDatetimeLocal());
                     setHoraApertura(apertura);
@@ -419,12 +457,16 @@ export function SurveyCreatePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cierre</label>
                 <input
                   type="datetime-local"
+                  max={MAX_DATETIME_LOCAL}
                   min={
                     horaApertura
                       ? datetimeLocalMasMinutos(horaApertura)
                       : nowDatetimeLocal()
                   }
                   value={horaCierre}
+                  onInput={(e) => {
+                    e.currentTarget.value = normalizarDatetimeLocalYear(e.currentTarget.value);
+                  }}
                   onChange={(e) =>
                     setHoraCierre(
                       limitarDatetimeLocal(
@@ -554,7 +596,7 @@ export function SurveyCreatePage() {
               <h2 className="font-semibold text-gray-700">Asignaciones</h2>
               <p className="text-sm text-gray-500">Todos aparecen seleccionados por defecto.</p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={`grid gap-4 ${requiereJurado ? 'md:grid-cols-2' : ''}`}>
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-gray-700">Equipos</p>
@@ -598,6 +640,7 @@ export function SurveyCreatePage() {
                 </div>
               </section>
 
+              {requiereJurado && (
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-gray-700">Jurado</p>
@@ -643,6 +686,7 @@ export function SurveyCreatePage() {
                   )}
                 </div>
               </section>
+              )}
             </div>
           </div>
 
@@ -676,7 +720,7 @@ export function SurveyCreatePage() {
 
       <Modal
         open={modalCriterio}
-        onClose={() => setModalCriterio(false)}
+        onClose={() => { setModalCriterio(false); setNuevoCriterio(CRITERION_DRAFT_EMPTY); }}
         title="Crear criterio"
         maxWidth="max-w-xl"
       >
@@ -705,20 +749,7 @@ export function SurveyCreatePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
               <select
                 value={nuevoCriterio.tipo}
-                onChange={(e) =>
-                  setNuevoCriterio({
-                    ...nuevoCriterio,
-                    tipo: e.target.value as CriterionType,
-                    opciones: reescalarPesosOpciones(
-                      nuevoCriterio.opciones as any,
-                      Number(nuevoCriterio.peso)
-                    ) as any,
-                    rubricaAspectos: reescalarPesosOpciones(
-                      nuevoCriterio.rubricaAspectos as any,
-                      Number(nuevoCriterio.peso)
-                    ) as any
-                  })
-                }
+                onChange={(e) => setNuevoCriterio(cambiarTipoCriterio(nuevoCriterio, e.target.value as CriterionType))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="numerico">Numérico</option>
@@ -1032,7 +1063,7 @@ export function SurveyCreatePage() {
           )}
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setModalCriterio(false)}>
+            <Button variant="secondary" onClick={() => { setModalCriterio(false); setNuevoCriterio(CRITERION_DRAFT_EMPTY); }}>
               Cancelar
             </Button>
             <Button loading={guardandoCriterio} onClick={guardarCriterio} disabled={guardarCriterioDeshabilitado}>

@@ -32,7 +32,7 @@ export function EnterRoomPage() {
       }
       navigate(`/sala/${codigo.toUpperCase()}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al buscar la sala');
+      toast.error(error instanceof Error ? error.message : 'No se pudo buscar la sala');
     } finally {
       setCargando(false);
     }
@@ -45,7 +45,7 @@ export function EnterRoomPage() {
       await buscarEncuesta(codigo.toUpperCase());
       navigate(`/sala/${codigo.toUpperCase()}/resultados`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al buscar la sala');
+      toast.error(error instanceof Error ? error.message : 'No se pudo buscar la sala');
     } finally {
       setCargandoResultados(false);
     }

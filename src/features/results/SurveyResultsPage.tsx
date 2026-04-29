@@ -12,6 +12,7 @@ import { Layout } from '../../shared/layout/Layout';
 import { ResultRow, Survey, SurveyState } from '../../shared/types/domain';
 import {
   DATETIME_INPUT_CLASS,
+  MAX_DATETIME_LOCAL,
   datetimeLocalMasMinutos,
   datetimeLocalToIso,
   etiquetaAperturaEncuesta,
@@ -19,6 +20,7 @@ import {
   formatFechaLocal,
   isoToDatetimeLocal,
   limitarDatetimeLocal,
+  normalizarDatetimeLocalYear,
   nowDatetimeLocal,
   validarHorarioEncuesta
 } from '../../shared/utils/dateTime';
@@ -79,7 +81,7 @@ export function SurveyResultsPage() {
       setResults(res);
       setComentarios(coms);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cargar resultados');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los resultados');
     } finally {
       setCargando(false);
     }
@@ -97,7 +99,7 @@ export function SurveyResultsPage() {
       setResults(res);
       toast.success('Ranking recalculado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al recalcular');
+      toast.error(error instanceof Error ? error.message : 'No se pudo recalcular el ranking');
     } finally {
       setRecalculando(false);
     }
@@ -111,7 +113,7 @@ export function SurveyResultsPage() {
       setEncuesta(actualizada as Survey);
       toast.success(`Encuesta ${STATE_LABEL[nuevoEstado].toLowerCase()}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el estado');
     } finally {
       setCambiandoEstado(false);
     }
@@ -125,7 +127,7 @@ export function SurveyResultsPage() {
       setEncuesta(actualizada as Survey);
       toast.success('Encuesta reabierta');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al reabrir');
+      toast.error(error instanceof Error ? error.message : 'No se pudo reabrir la encuesta');
     } finally {
       setCambiandoEstado(false);
     }
@@ -185,7 +187,7 @@ export function SurveyResultsPage() {
       setHoraApertura('');
       setHoraCierre('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al guardar');
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el horario');
     } finally {
       setCambiandoEstado(false);
     }
@@ -207,7 +209,7 @@ export function SurveyResultsPage() {
       });
       toast.success('Puntaje guardado');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al guardar');
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el puntaje');
     } finally {
       setGuardandoManual((prev) => ({ ...prev, [row.id]: false }));
     }
@@ -227,7 +229,7 @@ export function SurveyResultsPage() {
       setCriteriosAsignados(criterios);
       setAsignacionesCargadas(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cargar asignaciones');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar las asignaciones');
     }
   }
 
@@ -236,10 +238,14 @@ export function SurveyResultsPage() {
     if (equiposAsignados.length === 0) return toast.error('La encuesta debe tener al menos un equipo asignado');
     setGuardandoAsignaciones(true);
     try {
-      await votifyApi.updateSurveyAssignments(Number(surveyId), equiposAsignados, juecesAsignados);
+      await votifyApi.updateSurveyAssignments(
+        Number(surveyId),
+        equiposAsignados,
+        encuesta?.tipo_votante === 'publico' ? [] : juecesAsignados
+      );
       toast.success('Asignaciones actualizadas');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al guardar asignaciones');
+      toast.error(error instanceof Error ? error.message : 'No se pudieron guardar las asignaciones');
     } finally {
       setGuardandoAsignaciones(false);
     }
@@ -274,6 +280,7 @@ export function SurveyResultsPage() {
   }, {});
 
   const estado = encuesta?.estado;
+  const requiereJurado = encuesta?.tipo_votante !== 'publico';
   const errorHorarioModal = validarHorarioEncuesta({
     apertura: horaApertura,
     cierre: horaCierre,
@@ -534,12 +541,14 @@ export function SurveyResultsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Asignaciones</h2>
-                <p className="text-sm text-gray-500">Elige qué equipos participan y qué jurados pueden votar.</p>
+                <p className="text-sm text-gray-500">
+                  {requiereJurado ? 'Elige qué equipos participan y qué jurados pueden votar.' : 'Elige qué equipos participan en la votación pública.'}
+                </p>
               </div>
               <Button size="sm" loading={guardandoAsignaciones} onClick={guardarAsignaciones}>Guardar</Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={`grid gap-4 ${requiereJurado ? 'md:grid-cols-2' : ''}`}>
               <section className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-gray-800">Equipos</h3>
@@ -571,6 +580,7 @@ export function SurveyResultsPage() {
                 </div>
               </section>
 
+              {requiereJurado && (
               <section className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-gray-800">Jurado</h3>
@@ -601,6 +611,7 @@ export function SurveyResultsPage() {
                   {juecesDisponibles.length === 0 && <p className="text-sm text-gray-500 py-3">No hay jurado asignado a la competición</p>}
                 </div>
               </section>
+              )}
             </div>
           </div>
         )}
@@ -635,6 +646,10 @@ export function SurveyResultsPage() {
                   type="datetime-local"
                   value={horaApertura}
                   min={nowDatetimeLocal()}
+                  max={MAX_DATETIME_LOCAL}
+                  onInput={(e) => {
+                    e.currentTarget.value = normalizarDatetimeLocalYear(e.currentTarget.value);
+                  }}
                   onChange={(e) => {
                     const apertura = limitarDatetimeLocal(e.target.value, nowDatetimeLocal());
                     setHoraApertura(apertura);
@@ -664,6 +679,10 @@ export function SurveyResultsPage() {
                 type="datetime-local"
                 value={horaCierre}
                 min={horaApertura ? datetimeLocalMasMinutos(horaApertura) : nowDatetimeLocal()}
+                max={MAX_DATETIME_LOCAL}
+                onInput={(e) => {
+                  e.currentTarget.value = normalizarDatetimeLocalYear(e.currentTarget.value);
+                }}
                 onChange={(e) =>
                   setHoraCierre(
                     limitarDatetimeLocal(

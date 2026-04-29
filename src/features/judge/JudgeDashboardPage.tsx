@@ -27,7 +27,7 @@ export function JudgeDashboardPage() {
       try {
         setEncuestas(await votifyApi.getJudgeSurveys(userId) as JudgeSurvey[]);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Error al cargar encuestas');
+        toast.error(error instanceof Error ? error.message : 'No se pudieron cargar tus encuestas');
       } finally {
         setCargando(false);
       }

@@ -72,11 +72,11 @@ export class HttpClient {
   }
 
   private fallbackMessage(status: number) {
-    if (status === 400) return 'Revisa los datos e intentalo de nuevo';
-    if (status === 401 || status === 403) return 'No tienes permisos para hacer esta accion';
-    if (status === 404) return 'No se encontro el recurso solicitado';
-    if (status >= 500) return 'No se pudo completar la accion. Intentalo de nuevo mas tarde';
-    return 'No se pudo completar la accion';
+    if (status === 400) return 'Revisa los datos e inténtalo de nuevo.';
+    if (status === 401 || status === 403) return 'No tienes permisos para hacer esta acción.';
+    if (status === 404) return 'No se encontró el recurso solicitado.';
+    if (status >= 500) return 'No se pudo completar la acción. Inténtalo de nuevo más tarde.';
+    return 'No se pudo completar la acción.';
   }
 
   private normalizeMessage(raw: string, status: number) {
@@ -85,7 +85,7 @@ export class HttpClient {
     const lower = message.toLowerCase();
 
     if (lower.includes('must be') || lower.includes('should not') || lower.includes('property ') || lower.includes('expected')) {
-      return 'Revisa los campos obligatorios y los valores introducidos';
+      return 'Revisa los campos obligatorios y los valores introducidos.';
     }
     if (lower.includes('duplicate key') || lower.includes('unique constraint') || lower.includes('23505')) {
       return 'Ya existe un registro con esos datos';
@@ -94,7 +94,7 @@ export class HttpClient {
       return 'No se puede borrar porque hay datos relacionados';
     }
     if (lower.includes('invalid input syntax') || lower.includes('nan')) {
-      return 'Hay un valor numerico no valido';
+      return 'Hay un valor numérico no válido.';
     }
 
     return message.replace(/^Error:\s*/i, '');

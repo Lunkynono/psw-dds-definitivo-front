@@ -131,7 +131,7 @@ export function PublicVotePage() {
       localStorage.removeItem('votify_sala');
       setCompletado(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al enviar el voto');
+      toast.error(error instanceof Error ? error.message : 'No se pudo enviar el voto');
     } finally {
       setEnviando(false);
     }

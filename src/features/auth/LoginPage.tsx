@@ -51,7 +51,7 @@ export function LoginPage() {
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al iniciar sesión');
+      toast.error(error instanceof Error ? error.message : 'No se pudo iniciar sesión');
     } finally {
       setCargando(false);
     }

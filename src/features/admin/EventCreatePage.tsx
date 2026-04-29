@@ -79,7 +79,7 @@ export function EventCreatePage() {
       toast.success('Evento creado correctamente');
       navigate(`/admin/eventos/${evento.id}/editar`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al crear el evento');
+      toast.error(error instanceof Error ? error.message : 'No se pudo crear el evento');
     } finally {
       setGuardando(false);
     }

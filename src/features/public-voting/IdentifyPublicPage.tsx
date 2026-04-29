@@ -58,7 +58,7 @@ export function IdentifyPublicPage() {
       }));
       navigate(`/sala/${codigo}/votar`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al verificar tu registro. Inténtalo de nuevo.');
+      toast.error(error instanceof Error ? error.message : 'No se pudo verificar tu registro. Inténtalo de nuevo.');
     } finally {
       setEnviando(false);
     }
