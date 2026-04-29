@@ -1122,7 +1122,8 @@ function JudgeModal({
         </div>
         {encuestas.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Asignar a encuestas (opcional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Asignar a encuestas</label>
+            <p className="text-xs text-gray-500 mb-2">Puedes dejarlo sin marcar para añadirlo solo como juez de la competición.</p>
             {[...encuestas].sort((a, b) => {
                 const orderDiff = (ESTADO_ORDER[a.estado] ?? 99) - (ESTADO_ORDER[b.estado] ?? 99);
                 if (orderDiff !== 0) return orderDiff;
