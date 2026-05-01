@@ -149,7 +149,7 @@ export function ParticipantLiveResultsPage() {
         </p>
 
         <div className="mt-4 text-center">
-          <Link to="/participante" className="text-sm text-indigo-400 hover:underline">
+          <Link to="/participante/dashboard" className="text-sm text-indigo-400 hover:underline">
             Volver a mi dashboard
           </Link>
         </div>

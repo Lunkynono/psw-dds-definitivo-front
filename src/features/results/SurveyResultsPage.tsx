@@ -1,7 +1,7 @@
 import { Clock, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
@@ -45,6 +45,8 @@ const STATE_COLOR: Record<SurveyState, 'gray' | 'green' | 'yellow' | 'red'> = {
 
 export function SurveyResultsPage() {
   const { surveyId } = useParams();
+  const location = useLocation();
+  const desdeJuez = (location.state as { from?: string } | null)?.from === 'juez';
   const [encuesta, setEncuesta] = useState<Survey | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
@@ -290,7 +292,10 @@ export function SurveyResultsPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <Breadcrumb items={[
+        <Breadcrumb items={desdeJuez ? [
+          { label: 'Mi panel', to: '/juez' },
+          { label: encuesta?.nombre ?? '' }
+        ] : [
           { label: 'Mis eventos', to: '/admin' },
           { label: encuesta?.competicion?.evento?.nombre ?? '', to: `/admin/eventos/${encuesta?.competicion?.evento?.id}/editar` },
           { label: encuesta?.competicion?.nombre ?? '', to: `/admin/competiciones/${encuesta?.competicion_id}` },
