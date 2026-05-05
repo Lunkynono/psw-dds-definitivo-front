@@ -23,7 +23,7 @@ export function LoginPage() {
     if (!userId) return;
     votifyApi.me(userId)
       .then((data: any) => {
-        const destino = data?.rol === 'participante' ? '/participante' : data?.rol === 'juez' ? '/juez' : '/admin';
+        const destino = data?.rol === 'participante' ? '/participante/dashboard' : data?.rol === 'juez' ? '/juez' : '/admin';
         navigate(destino, { replace: true });
       })
       .catch(() => undefined);
@@ -47,7 +47,7 @@ export function LoginPage() {
         const id = response.user?.id ?? response.session?.user?.id;
         if (id) {
           setSession({ userId: id, perfil: response.perfil, rol: response.rol });
-          navigate(response.rol === 'participante' ? '/participante' : response.rol === 'juez' ? '/juez' : '/admin', { replace: true });
+          navigate(response.rol === 'participante' ? '/participante/dashboard' : response.rol === 'juez' ? '/juez' : '/admin', { replace: true });
         }
       }
     } catch (error) {
