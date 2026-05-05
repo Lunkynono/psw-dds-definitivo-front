@@ -19,6 +19,7 @@ export interface LoginPayload {
 
 export interface RegisterPayload extends LoginPayload {
   nombre: string;
+  tipo?: string;
 }
 
 export class VotifyApiFacade {

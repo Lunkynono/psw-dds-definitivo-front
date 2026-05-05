@@ -28,7 +28,8 @@ export function LoginPage() {
         await votifyApi.register({
           nombre: data.nombre ?? '',
           correo: data.correo,
-          password: data.contrasena
+          password: data.contrasena,
+          tipo
         });
         toast.success('Registro exitoso. Revisa tu correo para confirmar tu cuenta.');
       } else {
@@ -38,7 +39,7 @@ export function LoginPage() {
         });
         const id = response.user?.id ?? response.session?.user?.id;
         const roles: string[] = response.roles ?? [];
-        if (id) {
+if (id) {
           if (!roles.includes(tipo)) {
             const nombreRol = tipo === 'admin' ? 'administrador' : tipo === 'juez' ? 'juez' : 'participante';
             toast.error(`No tienes permisos de ${nombreRol}`);

@@ -35,7 +35,7 @@ export function ParticipantDashboardPage() {
   const { participantId } = useParams();
   const [searchParams] = useSearchParams();
   const userId = useAuthStore((state) => state.userId);
-  const rol = useAuthStore((state) => state.rol);
+  const roles = useAuthStore((state) => state.roles);
   const [data, setData] = useState<ParticipantDashboard | null>(null);
   const [mensajeVacio, setMensajeVacio] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -46,7 +46,7 @@ export function ParticipantDashboardPage() {
   useEffect(() => {
     async function cargar() {
       const correo = searchParams.get('correo') ?? '';
-      if (!userId && !participantId && !correo) return;
+      if (!userId && !participantId && !correo) { setCargando(false); return; }
       const claveCarga = participantId ? `id:${participantId}` : correo ? `correo:${correo}` : `user:${userId}`;
       if (ultimaCarga.current === claveCarga) return;
       ultimaCarga.current = claveCarga;
@@ -116,7 +116,7 @@ export function ParticipantDashboardPage() {
     }
   }
 
-  const puedeEditar = Boolean(participantId && rol === 'admin');
+  const puedeEditar = Boolean(participantId && roles.includes('admin'));
 
   return (
     <Layout>
@@ -186,7 +186,7 @@ export function ParticipantDashboardPage() {
               {data.companeros.map((companero) => (
                 <Link
                   key={companero.id}
-                  to={`/admin/participantes/${companero.id}`}
+                  to={`/participante/dashboard?correo=${encodeURIComponent(companero.correo)}`}
                   className="block rounded-lg border border-gray-100 p-3 hover:border-indigo-200 hover:bg-indigo-50/40"
                 >
                   <p className="text-sm font-medium text-gray-800">{companero.nombre}</p>

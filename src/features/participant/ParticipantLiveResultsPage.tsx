@@ -1,6 +1,6 @@
 import { TrendingUp, Users, Wifi } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { ResultRow, Survey } from '../../shared/types/domain';
@@ -10,6 +10,7 @@ const barColors = ['bg-yellow-400', 'bg-indigo-400', 'bg-indigo-400', 'bg-indigo
 
 export function ParticipantLiveResultsPage() {
   const { surveyId } = useParams();
+  const navigate = useNavigate();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [ranking, setRanking] = useState<ResultRow[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -149,9 +150,9 @@ export function ParticipantLiveResultsPage() {
         </p>
 
         <div className="mt-4 text-center">
-          <Link to="/participante/dashboard" className="text-sm text-indigo-400 hover:underline">
+          <button onClick={() => navigate(-1)} className="text-sm text-indigo-400 hover:underline">
             Volver a mi dashboard
-          </Link>
+          </button>
         </div>
       </div>
     </div>
