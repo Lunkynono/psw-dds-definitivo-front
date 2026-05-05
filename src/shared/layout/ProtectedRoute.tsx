@@ -3,25 +3,28 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../app/store/auth.store';
 import { votifyApi } from '../facade/VotifyApiFacade';
 import Spinner from '../components/ui/Spinner';
+import { UserRole } from '../../shared/types/domain';
 
-export function ProtectedRoute() {
+type Props = { requiredRole: UserRole };
+
+export function ProtectedRoute({ requiredRole }: Props) {
   const userId = useAuthStore((state) => state.userId);
   const perfil = useAuthStore((state) => state.perfil);
-  const rol = useAuthStore((state) => state.rol);
+  const roles = useAuthStore((state) => state.roles);
   const setSession = useAuthStore((state) => state.setSession);
-  const [cargando, setCargando] = useState(Boolean(userId && (!perfil || !rol)));
+  const [cargando, setCargando] = useState(Boolean(userId && (!perfil || roles.length === 0)));
 
   useEffect(() => {
-    if (!userId || (perfil && rol)) {
+    if (!userId || (perfil && roles.length > 0)) {
       setCargando(false);
       return;
     }
 
     votifyApi.me(userId)
-      .then((data: any) => setSession({ userId, perfil: data.perfil, rol: data.rol }))
+      .then((data: any) => setSession({ userId, perfil: data.perfil, roles: data.roles ?? [] }))
       .catch(() => undefined)
       .finally(() => setCargando(false));
-  }, [userId, perfil, rol, setSession]);
+  }, [userId, perfil, roles, setSession]);
 
   if (!userId) return <Navigate to="/login" replace />;
 
@@ -32,6 +35,8 @@ export function ProtectedRoute() {
       </div>
     );
   }
+
+  if (!roles.includes(requiredRole)) return <Navigate to="/acceso" replace />;
 
   return <Outlet />;
 }

@@ -31,7 +31,7 @@ export function AppRouter() {
         <Route path="/participante/dashboard" element={<ParticipantDashboardPage />} />
         <Route path="/participante/encuestas/:surveyId/resultados" element={<ParticipantLiveResultsPage />} />
 
-        <Route element={<ProtectedRoute />}>
+        <Route element={<ProtectedRoute requiredRole="admin" />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/eventos/nuevo" element={<EventCreatePage />} />
           <Route path="/admin/eventos/:eventId/editar" element={<EventEditPage />} />
@@ -39,6 +39,9 @@ export function AppRouter() {
           <Route path="/admin/competiciones/:competitionId/encuesta/nueva" element={<SurveyCreatePage />} />
           <Route path="/admin/encuestas/:surveyId/resultados" element={<SurveyResultsPage />} />
           <Route path="/admin/participantes/:participantId" element={<ParticipantDashboardPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute requiredRole="juez" />}>
           <Route path="/juez" element={<JudgeDashboardPage />} />
           <Route path="/juez/encuesta/:surveyId/proyecto/:projectId" element={<JudgeVotePage />} />
         </Route>

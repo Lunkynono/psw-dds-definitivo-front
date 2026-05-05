@@ -12,14 +12,14 @@ const bloques = [
     titulo: 'Administrador',
     descripcion: 'Gestiona eventos, competiciones, equipos y encuestas.',
     color: 'indigo',
-    to: '/login'
+    to: '/login?tipo=admin'
   },
   {
     icon: ClipboardList,
     titulo: 'Juez',
     descripcion: 'Evalúa los proyectos asignados en las competiciones.',
     color: 'violet',
-    to: '/login'
+    to: '/login?tipo=juez'
   },
   {
     icon: Users,

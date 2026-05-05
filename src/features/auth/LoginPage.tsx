@@ -2,7 +2,7 @@ import { Vote } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 
@@ -16,6 +16,8 @@ export function LoginPage() {
   const [isRegistro, setIsRegistro] = useState(false);
   const [cargando, setCargando] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tipo = searchParams.get('tipo') ?? 'admin';
   const { setSession } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
@@ -35,9 +37,16 @@ export function LoginPage() {
           password: data.contrasena
         });
         const id = response.user?.id ?? response.session?.user?.id;
+        const roles: string[] = response.roles ?? [];
         if (id) {
-          setSession({ userId: id, perfil: response.perfil, rol: response.rol });
-          navigate(response.rol === 'participante' ? '/participante/dashboard' : response.rol === 'juez' ? '/juez' : '/admin', { replace: true });
+          if (!roles.includes(tipo)) {
+            const nombreRol = tipo === 'admin' ? 'administrador' : tipo === 'juez' ? 'juez' : 'participante';
+            toast.error(`No tienes permisos de ${nombreRol}`);
+            return;
+          }
+          setSession({ userId: id, perfil: response.perfil, roles: response.roles ?? [] });
+          const destino = tipo === 'participante' ? '/participante/dashboard' : tipo === 'juez' ? '/juez' : '/admin';
+          navigate(destino, { replace: true });
         }
       }
     } catch (error) {
@@ -56,7 +65,7 @@ export function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Votify</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isRegistro ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
+            {isRegistro ? 'Crea tu cuenta' : tipo === 'admin' ? 'Acceso administrador' : tipo === 'juez' ? 'Acceso juez' : 'Acceso participante'}
           </p>
         </div>
 
