@@ -1,5 +1,5 @@
 import { Vote } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
@@ -16,18 +16,8 @@ export function LoginPage() {
   const [isRegistro, setIsRegistro] = useState(false);
   const [cargando, setCargando] = useState(false);
   const navigate = useNavigate();
-  const { userId, setSession } = useAuthStore();
+  const { setSession } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
-
-  useEffect(() => {
-    if (!userId) return;
-    votifyApi.me(userId)
-      .then((data: any) => {
-        const destino = data?.rol === 'participante' ? '/participante/dashboard' : data?.rol === 'juez' ? '/juez' : '/admin';
-        navigate(destino, { replace: true });
-      })
-      .catch(() => undefined);
-  }, [userId, navigate]);
 
   async function onSubmit(data: LoginForm) {
     setCargando(true);
