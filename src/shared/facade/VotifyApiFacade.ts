@@ -1,5 +1,6 @@
 import { HttpClient } from '../api/http-client';
 import { EventSummary, ResultRow, Survey } from '../types/domain';
+import { Award, AwardPayload } from '../types/award';
 
 /**
  * Facade + Singleton para hablar con el backend.
@@ -248,6 +249,30 @@ export class VotifyApiFacade {
 
   updateParticipant(participantId: number, payload: unknown) {
     return this.http.patch(`/participants/${participantId}`, payload);
+  }
+
+  getEventAwards(eventId: number) {
+    return this.http.get<Award[]>(`/events/${eventId}/awards`);
+  }
+
+  createEventAward(eventId: number, payload: AwardPayload) {
+    return this.http.post<Award>(`/events/${eventId}/awards`, payload);
+  }
+
+  getCompetitionAwards(competitionId: number) {
+    return this.http.get<Award[]>(`/competitions/${competitionId}/awards`);
+  }
+
+  createCompetitionAward(competitionId: number, payload: AwardPayload) {
+    return this.http.post<Award>(`/competitions/${competitionId}/awards`, payload);
+  }
+
+  updateAward(awardId: number, payload: AwardPayload) {
+    return this.http.patch<Award>(`/awards/${awardId}`, payload);
+  }
+
+  deleteAward(awardId: number) {
+    return this.http.delete(`/awards/${awardId}`);
   }
 }
 

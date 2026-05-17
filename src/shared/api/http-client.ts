@@ -1,3 +1,5 @@
+import { translateForCurrentLanguage } from '../i18n/translations';
+
 /**
  * Cliente HTTP minimalista usado por `VotifyApiFacade`.
  *
@@ -31,18 +33,16 @@ export class HttpClient {
   }
 
   private async request<T>(path: string, init: RequestInit, userId?: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(userId ? { 'x-user-id': userId } : {}),
-        ...init.headers
-      }
-    });
+    let response: Response;
+    try {
+      response = await this.fetchWithFallback(path, init, userId);
+    } catch {
+      throw new Error(translateForCurrentLanguage('No se pudo conectar con el servidor. Comprueba que el backend este iniciado.'));
+    }
 
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(this.formatErrorMessage(message, response.status));
+      throw new Error(translateForCurrentLanguage(this.formatErrorMessage(message, response.status)));
     }
 
     if (response.status === 204) {
@@ -55,6 +55,31 @@ export class HttpClient {
     }
 
     return JSON.parse(text) as T;
+  }
+
+  private async fetchWithFallback(path: string, init: RequestInit, userId?: string) {
+    const requestInit: RequestInit = {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userId ? { 'x-user-id': userId } : {}),
+        ...init.headers
+      }
+    };
+
+    try {
+      return await fetch(`${this.baseUrl}${path}`, requestInit);
+    } catch (error) {
+      const fallbackBaseUrl = this.getLocalhostFallback();
+      if (!fallbackBaseUrl) throw error;
+      return fetch(`${fallbackBaseUrl}${path}`, requestInit);
+    }
+  }
+
+  private getLocalhostFallback() {
+    if (this.baseUrl.includes('://localhost:')) return this.baseUrl.replace('://localhost:', '://127.0.0.1:');
+    if (this.baseUrl.includes('://127.0.0.1:')) return this.baseUrl.replace('://127.0.0.1:', '://localhost:');
+    return null;
   }
 
   private formatErrorMessage(raw: string, status: number) {
@@ -72,11 +97,11 @@ export class HttpClient {
   }
 
   private fallbackMessage(status: number) {
-    if (status === 400) return 'Revisa los datos e inténtalo de nuevo.';
-    if (status === 401 || status === 403) return 'No tienes permisos para hacer esta acción.';
-    if (status === 404) return 'No se encontró el recurso solicitado.';
-    if (status >= 500) return 'No se pudo completar la acción. Inténtalo de nuevo más tarde.';
-    return 'No se pudo completar la acción.';
+    if (status === 400) return 'Revisa los datos e intentalo de nuevo.';
+    if (status === 401 || status === 403) return 'No tienes permisos para hacer esta accion.';
+    if (status === 404) return 'No se encontro el recurso solicitado.';
+    if (status >= 500) return 'No se pudo completar la accion. Intentalo de nuevo mas tarde.';
+    return 'No se pudo completar la accion.';
   }
 
   private normalizeMessage(raw: string, status: number) {
@@ -94,7 +119,7 @@ export class HttpClient {
       return 'No se puede borrar porque hay datos relacionados';
     }
     if (lower.includes('invalid input syntax') || lower.includes('nan')) {
-      return 'Hay un valor numérico no válido.';
+      return 'Hay un valor numerico no valido.';
     }
 
     return message.replace(/^Error:\s*/i, '');

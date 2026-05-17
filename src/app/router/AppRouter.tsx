@@ -16,10 +16,12 @@ import { PublicVotePage } from '../../features/public-voting/PublicVotePage';
 import { PublicResultsPage } from '../../features/public-voting/PublicResultsPage';
 import { ParticipantDashboardPage } from '../../features/participant/ParticipantDashboardPage';
 import { ParticipantLiveResultsPage } from '../../features/participant/ParticipantLiveResultsPage';
+import { PublicLanguageSwitcher } from '../../shared/i18n/PublicLanguageSwitcher';
 
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <PublicLanguageSwitcher />
       <Routes>
         <Route path="/" element={<EnterRoomPage />} />
         <Route path="/login" element={<LoginPage />} />

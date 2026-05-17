@@ -1,4 +1,4 @@
-import { Clock, Pencil } from 'lucide-react';
+import { Award as AwardIcon, Clock, Download, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -9,7 +9,9 @@ import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
+import { Award } from '../../shared/types/award';
 import { ResultRow, Survey, SurveyState } from '../../shared/types/domain';
+import { downloadWinnerCertificatePdf } from '../../shared/utils/certificatePdf';
 import {
   DATETIME_INPUT_CLASS,
   MAX_DATETIME_LOCAL,
@@ -49,6 +51,7 @@ export function SurveyResultsPage() {
   const desdeJuez = (location.state as { from?: string } | null)?.from === 'juez';
   const [encuesta, setEncuesta] = useState<Survey | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
+  const [premios, setPremios] = useState<Award[]>([]);
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [tab, setTab] = useState(0);
   const [cargando, setCargando] = useState(true);
@@ -82,6 +85,9 @@ export function SurveyResultsPage() {
       setEncuesta(enc);
       setResults(res);
       setComentarios(coms);
+      if (enc.competicion_id) {
+        setPremios(await votifyApi.getCompetitionAwards(enc.competicion_id));
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los resultados');
     } finally {
@@ -289,6 +295,24 @@ export function SurveyResultsPage() {
     editarApertura: estado !== 'abierta'
   });
 
+  function generarCertificado(result: ResultRow, index: number) {
+    if (!encuesta) return;
+    if (encuesta.estado !== 'cerrada') {
+      toast.error('Solo puedes generar certificados cuando la encuesta esta cerrada');
+      return;
+    }
+
+    const position = result.posicion_final ?? index + 1;
+    if (position > 3) return;
+
+    downloadWinnerCertificatePdf(encuesta, {
+      result,
+      position,
+      award: premios.find((premio) => premio.posicion === position)
+    });
+    toast.success('Certificado generado');
+  }
+
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
@@ -388,7 +412,7 @@ export function SurveyResultsPage() {
 
         {tab === 0 && (
           <div>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4 flex-wrap">
               <Button onClick={recalculate} loading={recalculando}>
                 Calcular resultados
               </Button>
@@ -408,19 +432,41 @@ export function SurveyResultsPage() {
                   const equipo = r.proyecto?.equipo?.nombre;
                   const pos = r.posicion_final ?? idx + 1;
 
-                  const medalStyles: Record<number, { border: string; bg: string; badge: string }> = {
-                    1: { border: 'border-l-4 border-yellow-400', bg: 'bg-yellow-50/40', badge: '🥇' },
-                    2: { border: 'border-l-4 border-gray-400', bg: 'bg-gray-50/40', badge: '🥈' },
-                    3: { border: 'border-l-4 border-amber-500', bg: 'bg-amber-50/40', badge: '🥉' }
+                  const medalStyles: Record<number, { border: string; bg: string; badge: string; badgeClass: string; progress: string }> = {
+                    1: {
+                      border: 'border-l-4 border-yellow-500',
+                      bg: 'bg-yellow-50/40',
+                      badge: '1',
+                      badgeClass: 'bg-yellow-500 text-white shadow-sm shadow-yellow-200',
+                      progress: 'bg-yellow-500'
+                    },
+                    2: {
+                      border: 'border-l-4 border-slate-400',
+                      bg: 'bg-slate-50/70',
+                      badge: '2',
+                      badgeClass: 'bg-slate-600 text-white shadow-sm shadow-slate-200',
+                      progress: 'bg-slate-500'
+                    },
+                    3: {
+                      border: 'border-l-4 border-orange-700',
+                      bg: 'bg-orange-50/40',
+                      badge: '3',
+                      badgeClass: 'bg-orange-700 text-white shadow-sm shadow-orange-200',
+                      progress: 'bg-orange-700'
+                    }
                   };
                   const medal = medalStyles[pos];
+                  const premio = premios.find((item) => item.posicion === pos);
+                  const puedeGenerarCertificado = encuesta?.estado === 'cerrada' && pos <= 3;
 
                   return (
                     <div key={r.id} className={`bg-white border border-gray-100 rounded-xl p-4 shadow-card ${medal?.border ?? ''} ${medal?.bg ?? ''}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                           {medal ? (
-                            <span className="text-xl leading-none">{medal.badge}</span>
+                            <span className={`w-7 h-7 rounded-full text-sm font-bold flex items-center justify-center ${medal.badgeClass}`}>
+                              {medal.badge}
+                            </span>
                           ) : (
                             <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-sm font-bold flex items-center justify-center">
                               {pos}
@@ -428,7 +474,28 @@ export function SurveyResultsPage() {
                           )}
                           <div>
                             <p className="font-medium text-gray-800">{nombre}</p>
-                            {equipo && <p className="text-xs text-gray-500">{equipo}</p>}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {equipo && <p className="text-xs text-gray-500">{equipo}</p>}
+                              {pos <= 3 && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => generarCertificado(r, idx)}
+                                  disabled={!puedeGenerarCertificado}
+                                  title={puedeGenerarCertificado ? 'Generar certificado' : 'Disponible cuando la encuesta este cerrada'}
+                                  className="px-2 py-1 text-[11px] rounded-lg"
+                                >
+                                  <Download size={12} />
+                                  Certificado
+                                </Button>
+                              )}
+                            </div>
+                            {idx < 3 && premio && (
+                              <p className="text-xs text-amber-700 mt-0.5 inline-flex items-center gap-1">
+                                <AwardIcon size={12} />
+                                {premio.descripcion}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -489,7 +556,7 @@ export function SurveyResultsPage() {
 
                       <div className="w-full bg-gray-100 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${pos === 1 ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-indigo-400'}`}
+                          className={`h-2 rounded-full transition-all ${medal?.progress ?? 'bg-indigo-400'}`}
                           style={{ width: `${(puntaje / maxPuntaje) * 100}%` }}
                         />
                       </div>

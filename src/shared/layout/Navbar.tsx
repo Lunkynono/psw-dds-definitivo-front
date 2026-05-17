@@ -1,6 +1,7 @@
 import { ClipboardList, LayoutDashboard, LogOut, Vote } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
 
 export function Navbar() {
   const perfil = useAuthStore((state) => state.perfil);
@@ -67,6 +68,7 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-3">
+        <LanguageSwitcher compact />
         {badgeRoles.length > 0 && (
           <div className="hidden sm:flex items-center gap-1">
             {badgeRoles.map(({ label, color }) => (

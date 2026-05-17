@@ -1,3 +1,5 @@
+import { getStoredLanguage } from '../i18n/translations';
+
 const pad = (value: number) => String(value).padStart(2, '0');
 const YEAR_RE = /^(\d{4,})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
 
@@ -85,7 +87,7 @@ export const validarHorarioEncuesta = ({
 
 export const formatFechaLocal = (iso: string | null | undefined): string => {
   if (!iso) return '';
-  return new Date(iso).toLocaleString('es', {
+  return new Date(iso).toLocaleString(getStoredLanguage() === 'en' ? 'en-US' : 'es-ES', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

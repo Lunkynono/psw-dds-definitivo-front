@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
+import { AwardManager } from '../../shared/components/awards/AwardManager';
 import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
@@ -10,6 +11,7 @@ import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
+import { Award, AwardPayload } from '../../shared/types/award';
 import { etiquetaAperturaEncuesta, etiquetaCierre, formatFechaLocal } from '../../shared/utils/dateTime';
 import {
   RUBRICA_NIVELES,
@@ -121,6 +123,7 @@ export function CompetitionManagementPage() {
   const [criterios, setCriterios] = useState<Criterion[]>([]);
   const [encuestas, setEncuestas] = useState<Survey[]>([]);
   const [jueces, setJueces] = useState<Judge[]>([]);
+  const [premios, setPremios] = useState<Award[]>([]);
   const [cargando, setCargando] = useState(true);
 
   const [modalEquipo, setModalEquipo] = useState(false);
@@ -171,11 +174,31 @@ export function CompetitionManagementPage() {
       setCriterios(summary.criteria ?? []);
       setEncuestas(summary.surveys ?? []);
       setJueces(summary.judges ?? []);
+      setPremios(await votifyApi.getCompetitionAwards(Number(competitionId)));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los datos');
     } finally {
       setCargando(false);
     }
+  }
+
+  async function crearPremio(payload: AwardPayload) {
+    if (!competitionId) return;
+    const award = await votifyApi.createCompetitionAward(Number(competitionId), payload);
+    setPremios((prev) => [...prev, award]);
+    toast.success('Premio creado');
+  }
+
+  async function actualizarPremio(awardId: number, payload: AwardPayload) {
+    const award = await votifyApi.updateAward(awardId, payload);
+    setPremios((prev) => prev.map((item) => item.id === awardId ? award : item));
+    toast.success('Premio actualizado');
+  }
+
+  async function eliminarPremio(awardId: number) {
+    await votifyApi.deleteAward(awardId);
+    setPremios((prev) => prev.filter((item) => item.id !== awardId));
+    toast.success('Premio eliminado');
   }
 
   async function guardarEquipo() {
@@ -474,6 +497,17 @@ export function CompetitionManagementPage() {
           { label: comp?.evento?.nombre ?? '', to: `/admin/eventos/${comp?.evento_id}/editar` },
           { label: comp?.nombre ?? '' }
         ]} />
+
+        <div className="mt-2 mb-5">
+          <AwardManager
+            title="Premios"
+            subtitle="Define los premios de esta competicion, la posicion que los recibe y sus condiciones de entrega."
+            awards={premios}
+            onCreate={crearPremio}
+            onUpdate={actualizarPremio}
+            onDelete={eliminarPremio}
+          />
+        </div>
 
         <section className="mt-2">
           <div className="flex items-center justify-between mb-3">

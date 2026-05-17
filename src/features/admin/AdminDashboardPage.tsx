@@ -6,6 +6,7 @@ import { useAuthStore } from '../../app/store/auth.store';
 import { Button } from '../../shared/components/ui/Button';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
+import { getStoredLanguage } from '../../shared/i18n/translations';
 import { Layout } from '../../shared/layout/Layout';
 import { EventSummary } from '../../shared/types/domain';
 
@@ -102,7 +103,7 @@ export function AdminDashboardPage() {
                   ) : <span />}
                   {evento.created_at && (
                     <p className="text-xs text-gray-300">
-                      {new Date(evento.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(evento.created_at).toLocaleDateString(getStoredLanguage() === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   )}
                 </div>
