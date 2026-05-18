@@ -1,4 +1,4 @@
-import { ClipboardList, LayoutDashboard, LucideIcon, Plus, Trash2, Users } from 'lucide-react';
+import { ClipboardList, FileUp, LayoutDashboard, LucideIcon, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
@@ -61,15 +61,39 @@ type AccessBlock = {
 };
 
 type PublicOption = { id: number; nombre: string; imagen_url?: string | null };
+type ParticipantForm = {
+  eventoId: string;
+  competicionId: string;
+  nombreEquipo: string;
+  proyectoNombre: string;
+  proyectoDesc: string;
+  proyectoArchivo: File | null;
+  participantes: Array<{ nombre: string; correo: string; rol: string }>;
+};
 
-const estadoInicialFormulario = {
+const estadoInicialFormulario: ParticipantForm = {
   eventoId: '',
   competicionId: '',
   nombreEquipo: '',
   proyectoNombre: '',
   proyectoDesc: '',
+  proyectoArchivo: null,
   participantes: [{ nombre: '', correo: '', rol: '' }]
 };
+
+const MAX_PROJECT_FILE_BYTES = 20 * 1024 * 1024;
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.includes(',') ? result.split(',')[1] : result);
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo del proyecto'));
+    reader.readAsDataURL(file);
+  });
+}
 
 export function AccessPage() {
   const navigate = useNavigate();
@@ -126,13 +150,27 @@ export function AccessPage() {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
     }
 
+    if (formParticipante.proyectoArchivo && formParticipante.proyectoArchivo.size > MAX_PROJECT_FILE_BYTES) {
+      return toast.error('El archivo del proyecto no puede superar 20 MB');
+    }
+
     setGuardando(true);
     try {
+      const archivoProyecto = formParticipante.proyectoArchivo
+        ? {
+            nombre: formParticipante.proyectoArchivo.name,
+            tipo: formParticipante.proyectoArchivo.type || 'application/octet-stream',
+            tamano: formParticipante.proyectoArchivo.size,
+            base64: await fileToBase64(formParticipante.proyectoArchivo)
+          }
+        : undefined;
+
       await votifyApi.createTeam(Number(formParticipante.competicionId), {
         equipoNombre: formParticipante.nombreEquipo.trim(),
         proyecto: {
           nombre: formParticipante.proyectoNombre.trim(),
-          descripcion: formParticipante.proyectoDesc || null
+          descripcion: formParticipante.proyectoDesc || null,
+          archivo: archivoProyecto
         },
         participantes: formParticipante.participantes
           .filter((participante) => participante.nombre.trim() && participante.correo.trim())
@@ -263,6 +301,41 @@ export function AccessPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               placeholder="Equipo Alpha"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Archivo del proyecto</label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm text-gray-600 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors">
+              <span className="inline-flex items-center gap-2 min-w-0">
+                <FileUp size={16} className="text-indigo-500 flex-shrink-0" />
+                <span className="truncate">
+                  {formParticipante.proyectoArchivo?.name ?? 'Adjuntar archivo del proyecto'}
+                </span>
+              </span>
+              <span className="text-xs text-gray-400 flex-shrink-0">Max. 20 MB</span>
+              <input
+                type="file"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (file && file.size > MAX_PROJECT_FILE_BYTES) {
+                    toast.error('El archivo del proyecto no puede superar 20 MB');
+                    event.target.value = '';
+                    return;
+                  }
+                  setFormParticipante((prev) => ({ ...prev, proyectoArchivo: file }));
+                }}
+              />
+            </label>
+            {formParticipante.proyectoArchivo && (
+              <button
+                type="button"
+                onClick={() => setFormParticipante((prev) => ({ ...prev, proyectoArchivo: null }))}
+                className="mt-1 text-xs text-gray-400 hover:text-red-500"
+              >
+                Quitar archivo
+              </button>
+            )}
           </div>
 
           <div>

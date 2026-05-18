@@ -7,14 +7,15 @@ import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import Spinner from '../../shared/components/ui/Spinner';
 import { Button } from '../../shared/components/ui/Button';
+import { ProjectFileLink } from '../../shared/components/project/ProjectFileLink';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
 
 type ParticipantDashboard = {
   participante: { id: number; nombre: string; correo: string; rol?: string | null };
   equipo?: { id: number; nombre: string } | null;
-  proyecto?: { id: number; nombre: string; descripcion?: string | null } | null;
-  proyectos: Array<{ id: number; nombre: string; descripcion?: string | null }>;
+  proyecto?: { id: number; nombre: string; descripcion?: string | null; archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null } | null;
+  proyectos: Array<{ id: number; nombre: string; descripcion?: string | null; archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null }>;
   competicion?: { id: number; nombre: string; descripcion?: string | null } | null;
   evento?: { id: number; nombre: string; lugar?: string | null } | null;
   companeros: Array<{ id: number; nombre: string; correo: string; rol?: string | null }>;
@@ -170,6 +171,7 @@ export function ParticipantDashboardPage() {
                   <div key={proyecto.id} className="border border-gray-100 rounded-lg p-3">
                     <p className="font-medium text-gray-800">{proyecto.nombre}</p>
                     {proyecto.descripcion && <p className="text-sm text-gray-500 mt-1">{proyecto.descripcion}</p>}
+                    <ProjectFileLink project={proyecto} />
                   </div>
                 ))}
               </div>

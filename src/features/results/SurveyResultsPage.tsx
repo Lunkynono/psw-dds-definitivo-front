@@ -1,4 +1,4 @@
-import { Award as AwardIcon, Clock, Download, Pencil } from 'lucide-react';
+import { Award as AwardIcon, Clock, Download, Pencil, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -7,7 +7,7 @@ import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
 import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
-import { votifyApi } from '../../shared/facade/VotifyApiFacade';
+import { AiProjectSummary, votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
 import { Award } from '../../shared/types/award';
 import { ResultRow, Survey, SurveyState } from '../../shared/types/domain';
@@ -29,7 +29,7 @@ import {
 
 type Comentario = { texto: string; criterio: string; proyecto: string; origen: 'Público' | 'Jurado' };
 
-const TABS = ['Ranking', 'Comentarios', 'Criterios', 'Asignaciones'];
+const TABS = ['Ranking', 'Comentarios', 'Resumen IA', 'Criterios', 'Asignaciones'];
 
 const STATE_LABEL: Record<SurveyState, string> = {
   borrador: 'Borrador',
@@ -53,10 +53,12 @@ export function SurveyResultsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [premios, setPremios] = useState<Award[]>([]);
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
+  const [resumenesIa, setResumenesIa] = useState<AiProjectSummary[]>([]);
   const [tab, setTab] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
+  const [generandoResumenes, setGenerandoResumenes] = useState(false);
   const [editManual, setEditManual] = useState<Record<number, string>>({});
   const [guardandoManual, setGuardandoManual] = useState<Record<number, boolean>>({});
 
@@ -85,6 +87,7 @@ export function SurveyResultsPage() {
       setEncuesta(enc);
       setResults(res);
       setComentarios(coms);
+      setResumenesIa(await votifyApi.getSurveyAiSummaries(Number(surveyId)));
       if (enc.competicion_id) {
         setPremios(await votifyApi.getCompetitionAwards(enc.competicion_id));
       }
@@ -313,6 +316,20 @@ export function SurveyResultsPage() {
     toast.success('Certificado generado');
   }
 
+  async function generarResumenesIa() {
+    if (!surveyId) return;
+    setGenerandoResumenes(true);
+    try {
+      const data = await votifyApi.generateSurveyAiSummaries(Number(surveyId));
+      setResumenesIa(data);
+      toast.success('Resúmenes IA generados');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron generar los resúmenes IA');
+    } finally {
+      setGenerandoResumenes(false);
+    }
+  }
+
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
@@ -398,7 +415,7 @@ export function SurveyResultsPage() {
           {TABS.map((t, i) => (
             <button
               key={t}
-              onClick={() => { setTab(i); if (i === 2 || i === 3) cargarAsignaciones(); }}
+              onClick={() => { setTab(i); if (i === 3 || i === 4) cargarAsignaciones(); }}
               className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
                 tab === i
                   ? 'bg-white text-indigo-700 font-semibold shadow-sm'
@@ -591,6 +608,66 @@ export function SurveyResultsPage() {
         )}
 
         {tab === 2 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Resumen IA</h2>
+                <p className="text-sm text-gray-500">Resume lo que opinan el público y el jurado sobre cada proyecto.</p>
+              </div>
+              <Button onClick={generarResumenesIa} loading={generandoResumenes}>
+                <Sparkles size={15} />
+                Generar resumen IA
+              </Button>
+            </div>
+
+            {resumenesIa.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/70 px-4 py-8 text-center">
+                <Sparkles size={24} className="mx-auto text-indigo-300 mb-2" />
+                <p className="text-sm font-medium text-gray-700">Aún no hay resúmenes IA</p>
+                <p className="text-xs text-gray-400 mt-1">Genera los resúmenes cuando ya existan comentarios de evaluación.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {resumenesIa.map((summary) => (
+                  <article key={summary.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-card">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{summary.proyecto_nombre}</h3>
+                        {summary.equipo_nombre && <p className="text-xs text-gray-500">{summary.equipo_nombre}</p>}
+                      </div>
+                      <Badge color={summary.sentimiento === 'positivo' ? 'green' : summary.sentimiento === 'critico' ? 'red' : summary.sentimiento === 'insuficiente' ? 'gray' : 'yellow'}>
+                        {summary.sentimiento}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed">{summary.resumen}</p>
+                    <div className="grid gap-3 md:grid-cols-2 mt-4">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 mb-1">Fortalezas</p>
+                        <ul className="space-y-1 text-sm text-gray-600">
+                          {summary.fortalezas.map((item, index) => <li key={index}>- {item}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 mb-1">Mejoras</p>
+                        <ul className="space-y-1 text-sm text-gray-600">
+                          {summary.mejoras.map((item, index) => <li key={index}>- {item}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    {summary.temas.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-4">
+                        {summary.temas.map((tema) => <Badge key={tema} color="blue">{tema}</Badge>)}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-3">{summary.total_comentarios} comentarios analizados</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 3 && (
           <div className="space-y-3">
             {criteriosAsignados.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-8">No hay criterios asignados a esta encuesta</p>
@@ -608,7 +685,7 @@ export function SurveyResultsPage() {
           </div>
         )}
 
-        {tab === 3 && (
+        {tab === 4 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>

@@ -1,9 +1,10 @@
-import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { FileUp, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 import { AwardManager } from '../../shared/components/awards/AwardManager';
+import { ProjectFileLink } from '../../shared/components/project/ProjectFileLink';
 import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
@@ -61,7 +62,7 @@ const CRITERIO_DRAFT_VACIO = {
 type Team = {
   id: number;
   nombre: string;
-  proyecto?: Array<{ id: number; nombre: string; descripcion?: string | null }>;
+  proyecto?: Array<{ id: number; nombre: string; descripcion?: string | null; archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null }>;
   participante?: Array<{ id: number; nombre: string; correo: string; rol?: string | null }>;
 };
 
@@ -83,6 +84,20 @@ type Criterion = {
     descriptor?: string | null;
   }>;
 };
+
+const MAX_PROJECT_FILE_BYTES = 20 * 1024 * 1024;
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.includes(',') ? result.split(',')[1] : result);
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo del proyecto'));
+    reader.readAsDataURL(file);
+  });
+}
 
 type Survey = {
   id: number;
@@ -134,6 +149,7 @@ export function CompetitionManagementPage() {
     nombre: '',
     proyectoNombre: '',
     proyectoDesc: '',
+    proyectoArchivo: null as File | null,
     participantes: [{ nombre: '', correo: '', rol: '' }]
   });
 
@@ -145,7 +161,17 @@ export function CompetitionManagementPage() {
   const [guardandoCriterio, setGuardandoCriterio] = useState(false);
   const [guardandoJuez, setGuardandoJuez] = useState(false);
 
-  type EquipoDraft = { id: number; nombre: string; proyectoId: number | null; proyectoNombre: string; proyectoDesc: string; participantes: Array<{ id?: number; nombre: string; correo: string; rol: string }> };
+  type EquipoDraft = {
+    id: number;
+    nombre: string;
+    proyectoId: number | null;
+    proyectoNombre: string;
+    proyectoDesc: string;
+    proyectoArchivo: File | null;
+    eliminarArchivo: boolean;
+    archivoActual?: { archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null };
+    participantes: Array<{ id?: number; nombre: string; correo: string; rol: string }>;
+  };
   const [equipoEditando, setEquipoEditando] = useState<EquipoDraft | null>(null);
   const [modalEditarEquipo, setModalEditarEquipo] = useState(false);
   const [guardandoEdicionEquipo, setGuardandoEdicionEquipo] = useState(false);
@@ -213,14 +239,27 @@ export function CompetitionManagementPage() {
     if (participantesValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
     }
+    if (nuevoEquipo.proyectoArchivo && nuevoEquipo.proyectoArchivo.size > MAX_PROJECT_FILE_BYTES) {
+      return toast.error('El archivo del proyecto no puede superar 20 MB');
+    }
 
     setGuardandoEquipo(true);
     try {
+      const archivoProyecto = nuevoEquipo.proyectoArchivo
+        ? {
+            nombre: nuevoEquipo.proyectoArchivo.name,
+            tipo: nuevoEquipo.proyectoArchivo.type || 'application/octet-stream',
+            tamano: nuevoEquipo.proyectoArchivo.size,
+            base64: await fileToBase64(nuevoEquipo.proyectoArchivo)
+          }
+        : undefined;
+
       await votifyApi.createTeam(Number(competitionId), {
         equipoNombre: nuevoEquipo.nombre.trim(),
         proyecto: {
           nombre: nuevoEquipo.proyectoNombre.trim(),
-          descripcion: nuevoEquipo.proyectoDesc || null
+          descripcion: nuevoEquipo.proyectoDesc || null,
+          archivo: archivoProyecto
         },
         participantes: participantesValidos
           .map((participante) => ({
@@ -231,7 +270,7 @@ export function CompetitionManagementPage() {
       });
 
       await cargarDatos();
-      setNuevoEquipo({ nombre: '', proyectoNombre: '', proyectoDesc: '', participantes: [{ nombre: '', correo: '', rol: '' }] });
+      setNuevoEquipo({ nombre: '', proyectoNombre: '', proyectoDesc: '', proyectoArchivo: null, participantes: [{ nombre: '', correo: '', rol: '' }] });
       setModalEquipo(false);
       toast.success('Equipo añadido');
     } catch (error) {
@@ -242,12 +281,16 @@ export function CompetitionManagementPage() {
   }
 
   function abrirEditarEquipo(equipo: Team) {
+    const proyecto = equipo.proyecto?.[0];
     setEquipoEditando({
       id: equipo.id,
       nombre: equipo.nombre,
-      proyectoId: equipo.proyecto?.[0]?.id ?? null,
-      proyectoNombre: equipo.proyecto?.[0]?.nombre ?? '',
-      proyectoDesc: equipo.proyecto?.[0]?.descripcion ?? '',
+      proyectoId: proyecto?.id ?? null,
+      proyectoNombre: proyecto?.nombre ?? '',
+      proyectoDesc: proyecto?.descripcion ?? '',
+      proyectoArchivo: null,
+      eliminarArchivo: false,
+      archivoActual: proyecto,
       participantes: (equipo.participante?.length ? equipo.participante : [{ nombre: '', correo: '', id: undefined as any }])
         .map((p: any) => ({ id: p.id, nombre: p.nombre ?? '', correo: p.correo ?? '', rol: p.rol ?? '' }))
     });
@@ -266,13 +309,27 @@ export function CompetitionManagementPage() {
     if (partsValidos.some((p) => !p.nombre.trim() || !p.correo.trim() || !p.rol.trim())) {
       return toast.error('Nombre, correo y rol son obligatorios para cada participante');
     }
+    if (equipoEditando.proyectoArchivo && equipoEditando.proyectoArchivo.size > MAX_PROJECT_FILE_BYTES) {
+      return toast.error('El archivo del proyecto no puede superar 20 MB');
+    }
     setGuardandoEdicionEquipo(true);
     try {
+      const archivoProyecto = equipoEditando.proyectoArchivo
+        ? {
+            nombre: equipoEditando.proyectoArchivo.name,
+            tipo: equipoEditando.proyectoArchivo.type || 'application/octet-stream',
+            tamano: equipoEditando.proyectoArchivo.size,
+            base64: await fileToBase64(equipoEditando.proyectoArchivo)
+          }
+        : undefined;
+
       await votifyApi.updateTeam(equipoEditando.id, {
         nombre: equipoEditando.nombre.trim(),
         proyectoId: equipoEditando.proyectoId,
         proyectoNombre: equipoEditando.proyectoNombre.trim(),
         proyectoDesc: equipoEditando.proyectoDesc || null,
+        archivo: archivoProyecto,
+        eliminarArchivo: equipoEditando.eliminarArchivo,
         participantes: partsValidos.map((p) => ({ id: p.id, nombre: p.nombre.trim(), correo: p.correo.trim(), rol: p.rol.trim() }))
       });
       await cargarDatos();
@@ -523,7 +580,14 @@ export function CompetitionManagementPage() {
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') abrirEditarEquipo(equipo); }}
                 className="bg-white shadow-card border border-gray-100 rounded-xl p-4 text-left w-full hover:shadow-card-hover hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer">
                 <p className="font-semibold text-gray-800">{equipo.nombre}</p>
-                {equipo.proyecto?.[0] && <p className="text-sm text-indigo-600 mt-1">{equipo.proyecto[0].nombre}</p>}
+                {equipo.proyecto?.[0] && (
+                  <>
+                    <p className="text-sm text-indigo-600 mt-1">{equipo.proyecto[0].nombre}</p>
+                    <div onClick={(event) => event.stopPropagation()}>
+                      <ProjectFileLink project={equipo.proyecto[0]} />
+                    </div>
+                  </>
+                )}
                 <div className="mt-2 space-y-0.5">
                   {equipo.participante?.map((participante) => (
                     <p
@@ -697,6 +761,74 @@ export function CompetitionManagementPage() {
               <textarea rows={2} value={equipoEditando.proyectoDesc} onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoDesc: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Archivo del proyecto</label>
+              {equipoEditando.archivoActual?.archivo_url && !equipoEditando.eliminarArchivo && !equipoEditando.proyectoArchivo ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                  <ProjectFileLink project={equipoEditando.archivoActual} />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <label className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-100 bg-white px-2.5 py-1.5 text-xs font-medium text-indigo-700 cursor-pointer hover:bg-indigo-50">
+                      <FileUp size={13} />
+                      Reemplazar archivo
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          if (file && file.size > MAX_PROJECT_FILE_BYTES) {
+                            toast.error('El archivo del proyecto no puede superar 20 MB');
+                            event.target.value = '';
+                            return;
+                          }
+                          setEquipoEditando({ ...equipoEditando, proyectoArchivo: file, eliminarArchivo: false });
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setEquipoEditando({ ...equipoEditando, eliminarArchivo: true })}
+                      className="rounded-lg border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                      Eliminar archivo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm text-gray-600 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors">
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      <FileUp size={16} className="text-indigo-500 flex-shrink-0" />
+                      <span className="truncate">
+                        {equipoEditando.proyectoArchivo?.name ?? (equipoEditando.eliminarArchivo ? 'Archivo marcado para eliminar' : 'Adjuntar archivo del proyecto')}
+                      </span>
+                    </span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">Max. 20 MB</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        if (file && file.size > MAX_PROJECT_FILE_BYTES) {
+                          toast.error('El archivo del proyecto no puede superar 20 MB');
+                          event.target.value = '';
+                          return;
+                        }
+                        setEquipoEditando({ ...equipoEditando, proyectoArchivo: file, eliminarArchivo: false });
+                      }}
+                    />
+                  </label>
+                  {(equipoEditando.proyectoArchivo || equipoEditando.eliminarArchivo) && (
+                    <button
+                      type="button"
+                      onClick={() => setEquipoEditando({ ...equipoEditando, proyectoArchivo: null, eliminarArchivo: false })}
+                      className="mt-1 text-xs text-gray-400 hover:text-red-500"
+                    >
+                      Cancelar cambio de archivo
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">Participantes</label>
                 <Button
@@ -815,6 +947,7 @@ type TeamDraft = {
   nombre: string;
   proyectoNombre: string;
   proyectoDesc: string;
+  proyectoArchivo: File | null;
   participantes: Array<{ nombre: string; correo: string; rol: string }>;
 };
 
@@ -847,6 +980,38 @@ function TeamModal({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Descripción del proyecto</label>
           <textarea rows={2} value={value.proyectoDesc} onChange={(event) => setValue({ ...value, proyectoDesc: event.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Archivo del proyecto</label>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm text-gray-600 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors">
+            <span className="inline-flex items-center gap-2 min-w-0">
+              <FileUp size={16} className="text-indigo-500 flex-shrink-0" />
+              <span className="truncate">{value.proyectoArchivo?.name ?? 'Adjuntar archivo del proyecto'}</span>
+            </span>
+            <span className="text-xs text-gray-400 flex-shrink-0">Max. 20 MB</span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                if (file && file.size > MAX_PROJECT_FILE_BYTES) {
+                  toast.error('El archivo del proyecto no puede superar 20 MB');
+                  event.target.value = '';
+                  return;
+                }
+                setValue({ ...value, proyectoArchivo: file });
+              }}
+            />
+          </label>
+          {value.proyectoArchivo && (
+            <button
+              type="button"
+              onClick={() => setValue({ ...value, proyectoArchivo: null })}
+              className="mt-1 text-xs text-gray-400 hover:text-red-500"
+            >
+              Quitar archivo
+            </button>
+          )}
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">

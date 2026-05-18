@@ -23,6 +23,22 @@ export interface RegisterPayload extends LoginPayload {
   tipo?: string;
 }
 
+export type AiProjectSummary = {
+  id: number;
+  encuesta_id: number;
+  proyecto_id: number;
+  proyecto_nombre: string;
+  equipo_nombre?: string | null;
+  resumen: string;
+  fortalezas: string[];
+  mejoras: string[];
+  sentimiento: 'positivo' | 'mixto' | 'critico' | 'insuficiente';
+  temas: string[];
+  total_comentarios: number;
+  modelo?: string | null;
+  updated_at?: string;
+};
+
 export class VotifyApiFacade {
   private static instance: VotifyApiFacade | null = null;
   private readonly http: HttpClient;
@@ -233,6 +249,14 @@ export class VotifyApiFacade {
 
   getSurveyComments(surveyId: number) {
     return this.http.get<Array<{ texto: string; criterio: string; proyecto: string; origen: 'Público' | 'Jurado' }>>(`/surveys/${surveyId}/comments`);
+  }
+
+  getSurveyAiSummaries(surveyId: number) {
+    return this.http.get<AiProjectSummary[]>(`/surveys/${surveyId}/ai-summaries`);
+  }
+
+  generateSurveyAiSummaries(surveyId: number) {
+    return this.http.post<AiProjectSummary[]>(`/surveys/${surveyId}/ai-summaries/generate`);
   }
 
   getMyParticipantDashboard(userId: string) {

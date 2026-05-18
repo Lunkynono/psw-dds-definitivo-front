@@ -2,12 +2,13 @@ import { CheckCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ProjectFileLink } from '../../shared/components/project/ProjectFileLink';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Criterion } from '../../shared/types/domain';
 import { RUBRICA_NIVELES, agruparRubrica } from '../../shared/utils/scoring';
 
-type Proyecto = { id: number; nombre: string; descripcion?: string | null };
+type Proyecto = { id: number; nombre: string; descripcion?: string | null; archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null };
 type SalaSession = { correo: string; codigo: string; encuesta_id: number };
 
 type Respuesta = {
@@ -186,6 +187,7 @@ export function PublicVotePage() {
                 {proyecto.descripcion && (
                   <p className="text-sm text-gray-500 mt-1">{proyecto.descripcion}</p>
                 )}
+                <ProjectFileLink project={proyecto} />
               </div>
 
               <div className="p-5 space-y-4">

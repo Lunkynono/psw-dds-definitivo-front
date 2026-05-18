@@ -4,13 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/auth.store';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
+import { ProjectFileLink } from '../../shared/components/project/ProjectFileLink';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
 import { Criterion, Survey } from '../../shared/types/domain';
 import { RUBRICA_NIVELES, agruparRubrica } from '../../shared/utils/scoring';
 
-type Proyecto = { id: number; nombre: string; descripcion?: string | null };
+type Proyecto = { id: number; nombre: string; descripcion?: string | null; archivo_url?: string | null; archivo_nombre?: string | null; archivo_tamano?: number | null };
 type FormData = { encuesta: Survey; proyecto: Proyecto; criterios: Criterion[] };
 
 type Respuesta = {
@@ -156,6 +157,7 @@ export function JudgeVotePage() {
           {form.proyecto.descripcion && (
             <p className="text-sm text-gray-500 mt-1">{form.proyecto.descripcion}</p>
           )}
+          <ProjectFileLink project={form.proyecto} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
