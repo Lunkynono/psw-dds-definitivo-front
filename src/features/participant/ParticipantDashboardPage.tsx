@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardList, Mail, Save, Users } from 'lucide-react';
+import { ChevronDown, ClipboardList, Mail, Save, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -22,6 +22,7 @@ type ParticipantDashboard = {
   encuestas: Array<{ id: number; nombre: string; estado: string; tipo_votante: string; hora_apertura?: string | null; hora_cierre?: string | null }>;
   jueces: Array<{ persona_id: string; persona?: { nombre?: string; correo?: string } }>;
   estadoParticipacion: string;
+  participaciones?: ParticipantDashboard[];
 };
 
 const estadoColor = (estado: string): 'gray' | 'green' | 'yellow' | 'red' | 'blue' => {
@@ -118,6 +119,11 @@ export function ParticipantDashboardPage() {
   }
 
   const puedeEditar = Boolean(participantId && roles.includes('admin'));
+  const participacionesVisibles = data.participaciones?.map((participacion) => ({
+    ...participacion,
+    encuestas: participacion.encuestas.filter((encuesta) => encuesta.estado !== 'borrador')
+  })) ?? [];
+  const participacionesResumen = participacionesVisibles.length > 0 ? participacionesVisibles : [data];
 
   return (
     <Layout>
@@ -157,7 +163,143 @@ export function ParticipantDashboardPage() {
           </div>
         </section>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <details open className="group/project-section bg-white border border-gray-200 rounded-xl">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-indigo-600" />
+              <h2 className="font-semibold text-gray-900">Proyectos y equipos</h2>
+            </div>
+            <ChevronDown size={16} className="text-gray-400 transition-transform group-open/project-section:rotate-180" />
+          </summary>
+
+          <div className="space-y-3 border-t border-gray-100 p-5">
+            {participacionesResumen.map((participacion, index) => (
+              <details
+                key={participacion.participante.id}
+                open={index === 0}
+                className="group rounded-lg border border-gray-100 bg-white"
+              >
+                <summary className="flex cursor-pointer list-none flex-wrap items-start justify-between gap-3 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{participacion.equipo?.nombre ?? 'Sin equipo'}</p>
+                    <p className="text-xs text-gray-500">{participacion.competicion?.nombre ?? 'Sin competicion'}</p>
+                    <p className="text-xs text-gray-400">{participacion.evento?.nombre ?? 'Evento'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge color={participacion.proyectos.length ? 'green' : 'yellow'}>
+                      {participacion.estadoParticipacion}
+                    </Badge>
+                    <ChevronDown size={16} className="text-gray-400 transition-transform group-open:rotate-180" />
+                  </div>
+                </summary>
+
+                <div className="grid gap-4 border-t border-gray-100 p-4 md:grid-cols-2">
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold text-gray-800">Proyectos</h3>
+                    <div className="space-y-2">
+                      {participacion.proyectos.map((proyecto) => (
+                        <div key={proyecto.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                          <p className="text-sm font-medium text-gray-800">{proyecto.nombre}</p>
+                          {proyecto.descripcion && <p className="text-xs text-gray-500 mt-0.5">{proyecto.descripcion}</p>}
+                          <ProjectFileLink project={proyecto} />
+                        </div>
+                      ))}
+                      {participacion.proyectos.length === 0 && <p className="text-sm text-gray-500">Sin proyectos asociados.</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold text-gray-800">Compañeros</h3>
+                    <div className="space-y-2">
+                      {participacion.companeros.map((companero) => (
+                        <Link
+                          key={companero.id}
+                          to={`/participante/dashboard?correo=${encodeURIComponent(companero.correo)}`}
+                          className="block rounded-lg border border-gray-100 p-3 hover:border-indigo-200 hover:bg-indigo-50/40"
+                        >
+                          <p className="text-sm font-medium text-gray-800">{companero.nombre}</p>
+                          <p className="text-xs text-gray-500">{companero.correo}{companero.rol ? ` · ${companero.rol}` : ''}</p>
+                        </Link>
+                      ))}
+                      {participacion.companeros.length === 0 && <p className="text-sm text-gray-500">No hay más participantes en el equipo.</p>}
+                    </div>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </details>
+
+        {participacionesVisibles.length > 1 && (
+          <details open className="group/participaciones bg-white border border-gray-200 rounded-xl">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
+              <div className="flex items-center gap-2">
+                <ClipboardList size={18} className="text-indigo-600" />
+                <h2 className="font-semibold text-gray-900">Participaciones</h2>
+                <Badge color="blue">{participacionesVisibles.length}</Badge>
+              </div>
+              <ChevronDown size={16} className="text-gray-400 transition-transform group-open/participaciones:rotate-180" />
+            </summary>
+            <div className="space-y-3 border-t border-gray-100 p-5">
+              {participacionesVisibles.map((participacion, index) => (
+                <details
+                  key={participacion.participante.id}
+                  open={index === 0}
+                  className="group rounded-lg border border-gray-100 bg-white"
+                >
+                  <summary className="flex cursor-pointer list-none flex-wrap items-start justify-between gap-3 p-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                        {participacion.evento?.nombre ?? 'Evento'}
+                      </p>
+                      <p className="font-semibold text-gray-900">{participacion.competicion?.nombre ?? 'Sin competicion'}</p>
+                      <p className="text-sm text-gray-500">{participacion.equipo?.nombre ?? 'Sin equipo'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge color={participacion.proyectos.length ? 'green' : 'yellow'}>
+                        {participacion.estadoParticipacion}
+                      </Badge>
+                      <ChevronDown size={16} className="text-gray-400 transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                    {participacion.proyectos.length > 0 && (
+                      <div className="space-y-2">
+                        {participacion.proyectos.map((proyecto) => (
+                          <div key={proyecto.id} className="rounded-md bg-gray-50 px-3 py-2">
+                            <p className="text-sm font-medium text-gray-800">{proyecto.nombre}</p>
+                            {proyecto.descripcion && <p className="text-xs text-gray-500 mt-0.5">{proyecto.descripcion}</p>}
+                            <ProjectFileLink project={proyecto} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {participacion.encuestas.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {participacion.encuestas.map((encuesta) => (
+                          <Link
+                            key={encuesta.id}
+                            to={`/participante/encuestas/${encuesta.id}/resultados`}
+                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                          >
+                            {encuesta.nombre}
+                            <Badge color={estadoColor(encuesta.estado)}>{encuesta.estado}</Badge>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm text-gray-500">No hay encuestas asociadas al equipo.</p>
+                    )}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </details>
+        )}
+
+        <div className="hidden">
           <section className="bg-white border border-gray-200 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardList size={18} className="text-indigo-600" />
@@ -200,32 +342,6 @@ export function ParticipantDashboardPage() {
           </section>
         </div>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock size={18} className="text-indigo-600" />
-            <h2 className="font-semibold text-gray-900">Encuestas y actividad</h2>
-          </div>
-          <div className="space-y-2">
-            {data.encuestas.map((encuesta) => (
-              <div key={encuesta.id} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg p-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{encuesta.nombre}</p>
-                  <p className="text-xs text-gray-500">{encuesta.tipo_votante}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    to={`/participante/encuestas/${encuesta.id}/resultados`}
-                    className="rounded-lg border border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
-                  >
-                    Ver resultados
-                  </Link>
-                  <Badge color={estadoColor(encuesta.estado)}>{encuesta.estado}</Badge>
-                </div>
-              </div>
-            ))}
-            {data.encuestas.length === 0 && <p className="text-sm text-gray-500">No hay encuestas asociadas al equipo.</p>}
-          </div>
-        </section>
       </div>
     </Layout>
   );

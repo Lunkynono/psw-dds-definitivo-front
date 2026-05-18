@@ -81,7 +81,7 @@ const estadoInicialFormulario: ParticipantForm = {
   participantes: [{ nombre: '', correo: '', rol: '' }]
 };
 
-const MAX_PROJECT_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_PROJECT_FILE_BYTES = 50 * 1024 * 1024;
 
 function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -151,7 +151,7 @@ export function AccessPage() {
     }
 
     if (formParticipante.proyectoArchivo && formParticipante.proyectoArchivo.size > MAX_PROJECT_FILE_BYTES) {
-      return toast.error('El archivo del proyecto no puede superar 20 MB');
+      return toast.error('El archivo del proyecto no puede superar 50 MB');
     }
 
     setGuardando(true);
@@ -312,14 +312,14 @@ export function AccessPage() {
                   {formParticipante.proyectoArchivo?.name ?? 'Adjuntar archivo del proyecto'}
                 </span>
               </span>
-              <span className="text-xs text-gray-400 flex-shrink-0">Max. 20 MB</span>
+              <span className="text-xs text-gray-400 flex-shrink-0">Max. 50 MB</span>
               <input
                 type="file"
                 className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
                   if (file && file.size > MAX_PROJECT_FILE_BYTES) {
-                    toast.error('El archivo del proyecto no puede superar 20 MB');
+                    toast.error('El archivo del proyecto no puede superar 50 MB');
                     event.target.value = '';
                     return;
                   }

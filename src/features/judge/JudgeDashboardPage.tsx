@@ -6,6 +6,7 @@ import { useAuthStore } from '../../app/store/auth.store';
 import { Badge } from '../../shared/components/ui/Badge';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
+import { useLanguage } from '../../shared/i18n/LanguageProvider';
 import { Layout } from '../../shared/layout/Layout';
 import { Survey } from '../../shared/types/domain';
 
@@ -16,6 +17,7 @@ type JudgeSurvey = Survey & {
 };
 
 export function JudgeDashboardPage() {
+  const { language, t } = useLanguage();
   const userId = useAuthStore((state) => state.userId);
   const [encuestas, setEncuestas] = useState<JudgeSurvey[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -24,6 +26,22 @@ export function JudgeDashboardPage() {
 
   function scrollToEncuesta(id: number) {
     document.getElementById(`encuesta-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function pendingLabel(count: number) {
+    return language === 'en' ? `${count} pending` : `${count} pendiente${count !== 1 ? 's' : ''}`;
+  }
+
+  function unevaluatedProjectsLabel(count: number) {
+    return language === 'en'
+      ? `${count} project${count !== 1 ? 's' : ''} not evaluated`
+      : `${count} proyecto${count !== 1 ? 's' : ''} sin evaluar`;
+  }
+
+  function closesInMinutesLabel(minutes: number) {
+    return language === 'en'
+      ? `closes in ${minutes} minute${minutes !== 1 ? 's' : ''}`
+      : `cierra en ${minutes} minuto${minutes !== 1 ? 's' : ''}`;
   }
 
   const { cerrandoProximas, recienAbiertas } = useMemo(() => {
@@ -91,7 +109,7 @@ export function JudgeDashboardPage() {
                 <p className="text-sm font-semibold text-gray-900">{e.nombre}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Cierra en menos de 5 minutos
-                  {pendientes > 0 && ` · ${pendientes} proyecto${pendientes !== 1 ? 's' : ''} sin evaluar`}
+                  {pendientes > 0 && ` · ${unevaluatedProjectsLabel(pendientes)}`}
                 </p>
               </div>
             </div>
@@ -168,8 +186,8 @@ export function JudgeDashboardPage() {
               >
                 <AlertTriangle size={15} className="text-amber-500 flex-shrink-0" />
                 <p className="text-sm text-amber-800">
-                  <span className="font-semibold">{e.nombre}</span> cierra en {mins} minuto{mins !== 1 ? 's' : ''}
-                  {pendientes > 0 && <span className="font-semibold"> · {pendientes} proyecto{pendientes !== 1 ? 's' : ''} sin evaluar</span>}
+                  <span className="font-semibold">{e.nombre}</span> {closesInMinutesLabel(mins)}
+                  {pendientes > 0 && <span className="font-semibold"> · {unevaluatedProjectsLabel(pendientes)}</span>}
                 </p>
               </div>
             );
@@ -216,7 +234,7 @@ export function JudgeDashboardPage() {
                     </div>
                   ) : (
                     <Badge color="yellow">
-                      {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
+                      {pendingLabel(pendientes.length)}
                     </Badge>
                   )}
                 </div>

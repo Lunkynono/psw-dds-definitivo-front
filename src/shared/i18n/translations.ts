@@ -100,9 +100,9 @@ const exact: Record<string, ExactTranslation> = {
   'Eliminar archivo': { es: 'Eliminar archivo', en: 'Delete file' },
   'Cancelar cambio de archivo': { es: 'Cancelar cambio de archivo', en: 'Cancel file change' },
   'Archivo marcado para eliminar': { es: 'Archivo marcado para eliminar', en: 'File marked for deletion' },
-  'El archivo del proyecto no puede superar 20 MB': {
-    es: 'El archivo del proyecto no puede superar 20 MB',
-    en: 'The project file cannot exceed 20 MB',
+  'El archivo del proyecto no puede superar 50 MB': {
+    es: 'El archivo del proyecto no puede superar 50 MB',
+    en: 'The project file cannot exceed 50 MB',
   },
   'No se pudo leer el archivo del proyecto': {
     es: 'No se pudo leer el archivo del proyecto',
