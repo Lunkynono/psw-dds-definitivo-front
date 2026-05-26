@@ -201,11 +201,16 @@ export function CompetitionManagementPage() {
       setCriterios(summary.criteria ?? []);
       setEncuestas(summary.surveys ?? []);
       setJueces(summary.judges ?? []);
-      setPremios(await votifyApi.getCompetitionAwards(Number(competitionId)));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los datos');
     } finally {
       setCargando(false);
+    }
+
+    try {
+      setPremios(await votifyApi.getCompetitionAwards(Number(competitionId)));
+    } catch {
+      // la tabla premio puede no existir aún en la BD
     }
   }
 
