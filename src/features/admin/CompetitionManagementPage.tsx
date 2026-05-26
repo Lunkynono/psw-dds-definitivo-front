@@ -1,4 +1,4 @@
-import { FileUp, Plus, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, FileUp, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { ProjectFileLink } from '../../shared/components/project/ProjectFileLink
 import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
+import { Input } from '../../shared/components/ui/Input';
 import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
@@ -222,6 +223,7 @@ export function CompetitionManagementPage() {
   }
 
   async function eliminarPremio(awardId: number) {
+    if (!window.confirm('¿Eliminar este premio?')) return;
     await votifyApi.deleteAward(awardId);
     setPremios((prev) => prev.filter((item) => item.id !== awardId));
     toast.success('Premio eliminado');
@@ -297,6 +299,35 @@ export function CompetitionManagementPage() {
     setModalEditarEquipo(true);
   }
 
+  function usarPlantillaCriterio(tipo: 'numerico' | 'rubrica') {
+    if (tipo === 'rubrica') {
+      setNuevoCriterio({
+        ...CRITERIO_DRAFT_VACIO,
+        titulo: 'Evaluación general',
+        descripcion: 'Calidad técnica, innovación y presentación',
+        tipo: 'rubrica',
+        peso: '3',
+        rubricaAspectos: [
+          { texto: 'Calidad técnica', peso: 1, descriptores: {}, descriptoresAbiertos: false },
+          { texto: 'Innovación', peso: 1, descriptores: {}, descriptoresAbiertos: false },
+          { texto: 'Presentación', peso: 1, descriptores: {}, descriptoresAbiertos: false }
+        ]
+      });
+    } else {
+      setNuevoCriterio({
+        ...CRITERIO_DRAFT_VACIO,
+        titulo: 'Puntuación general',
+        descripcion: 'Valoración numérica global del proyecto',
+        tipo: 'numerico',
+        peso: '1',
+        rango_min: '0',
+        rango_max: '10'
+      });
+    }
+    setCriterioEditando(null);
+    setModalCriterio(true);
+  }
+
   async function guardarEdicionEquipo() {
     if (!equipoEditando) return;
     if (!equipoEditando.nombre.trim() || !equipoEditando.proyectoNombre.trim()) {
@@ -312,6 +343,7 @@ export function CompetitionManagementPage() {
     if (equipoEditando.proyectoArchivo && equipoEditando.proyectoArchivo.size > MAX_PROJECT_FILE_BYTES) {
       return toast.error('El archivo del proyecto no puede superar 50 MB');
     }
+    if (!window.confirm(`¿Guardar los cambios del equipo "${equipoEditando.nombre}"?`)) return;
     setGuardandoEdicionEquipo(true);
     try {
       const archivoProyecto = equipoEditando.proyectoArchivo
@@ -497,6 +529,7 @@ export function CompetitionManagementPage() {
 
   async function eliminarJuez(personaId: string) {
     if (!competitionId) return;
+    if (!window.confirm('¿Quitar este juez de la competición?')) return;
     try {
       await votifyApi.removeJudge(Number(competitionId), personaId);
       setJueces(jueces.filter((juez) => juez.persona_id !== personaId));
@@ -507,6 +540,7 @@ export function CompetitionManagementPage() {
   }
 
   async function eliminarCriterio(criterionId: number) {
+    if (!window.confirm('¿Eliminar este criterio? Las respuestas asociadas pueden dejar de usarse en el cálculo.')) return;
     try {
       await votifyApi.deleteCriterion(criterionId);
       setCriterios(criterios.filter((criterio) => criterio.id !== criterionId));
@@ -554,6 +588,14 @@ export function CompetitionManagementPage() {
           { label: comp?.evento?.nombre ?? '', to: `/admin/eventos/${comp?.evento_id}/editar` },
           { label: comp?.nombre ?? '' }
         ]} />
+        <button
+          type="button"
+          onClick={() => navigate(comp?.evento_id ? `/admin/eventos/${comp.evento_id}/editar` : '/admin')}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-indigo-700"
+        >
+          <ArrowLeft size={16} />
+          Volver
+        </button>
 
         <div className="mt-2 mb-5">
           <AwardManager
@@ -609,6 +651,14 @@ export function CompetitionManagementPage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-gray-900 border-l-4 border-indigo-500 pl-3">Criterios</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={() => usarPlantillaCriterio('numerico')}>
+                Plantilla rápida
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => usarPlantillaCriterio('rubrica')}>
+                Plantilla rúbrica
+              </Button>
+            </div>
             <Button size="sm" onClick={() => setModalCriterio(true)}>
               <Plus size={14} /> Añadir criterio
             </Button>
@@ -748,14 +798,18 @@ export function CompetitionManagementPage() {
       {equipoEditando && (
         <Modal open={modalEditarEquipo} onClose={() => { setModalEditarEquipo(false); setEquipoEditando(null); }} title="Editar equipo" maxWidth="max-w-xl">
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del equipo *</label>
-              <input value={equipoEditando.nombre} onChange={(e) => setEquipoEditando({ ...equipoEditando, nombre: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del proyecto *</label>
-              <input value={equipoEditando.proyectoNombre} onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoNombre: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
+            <Input
+              label="Nombre del equipo"
+              requiredLabel
+              value={equipoEditando.nombre}
+              onChange={(e) => setEquipoEditando({ ...equipoEditando, nombre: e.target.value })}
+            />
+            <Input
+              label="Nombre del proyecto"
+              requiredLabel
+              value={equipoEditando.proyectoNombre}
+              onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoNombre: e.target.value })}
+            />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Descripción del proyecto</label>
               <textarea rows={2} value={equipoEditando.proyectoDesc} onChange={(e) => setEquipoEditando({ ...equipoEditando, proyectoDesc: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
@@ -969,14 +1023,20 @@ function TeamModal({
   return (
     <Modal open={open} onClose={onClose} title="Añadir equipo" maxWidth="max-w-xl">
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del equipo *</label>
-          <input value={value.nombre} onChange={(event) => setValue({ ...value, nombre: event.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Equipo Alpha" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del proyecto *</label>
-          <input value={value.proyectoNombre} onChange={(event) => setValue({ ...value, proyectoNombre: event.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Mi proyecto" />
-        </div>
+        <Input
+          label="Nombre del equipo"
+          requiredLabel
+          value={value.nombre}
+          onChange={(event) => setValue({ ...value, nombre: event.target.value })}
+          placeholder="Equipo Alpha"
+        />
+        <Input
+          label="Nombre del proyecto"
+          requiredLabel
+          value={value.proyectoNombre}
+          onChange={(event) => setValue({ ...value, proyectoNombre: event.target.value })}
+          placeholder="Mi proyecto"
+        />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Descripción del proyecto</label>
           <textarea rows={2} value={value.proyectoDesc} onChange={(event) => setValue({ ...value, proyectoDesc: event.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />

@@ -1,21 +1,19 @@
-import { Camera, ChevronRight, Plus, Trash2, Trophy } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronRight, Plus, Trash2, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { useAuthStore } from '../../app/store/auth.store';
-import { AwardManager } from '../../shared/components/awards/AwardManager';
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
 import { Modal } from '../../shared/components/ui/Modal';
 import Spinner from '../../shared/components/ui/Spinner';
 import { votifyApi } from '../../shared/facade/VotifyApiFacade';
 import { Layout } from '../../shared/layout/Layout';
-import { Award, AwardPayload } from '../../shared/types/award';
 import { Competition, EventSummary } from '../../shared/types/domain';
 
-const TABS = ['Information', 'Competitions', 'Awards'];
+const TABS = ['Information', 'Competitions'];
 
 type EventForm = {
   nombre: string;
@@ -30,9 +28,6 @@ export function EventEditPage() {
   const [tab, setTab] = useState(0);
   const [evento, setEvento] = useState<EventSummary | null>(null);
   const [competiciones, setCompeticiones] = useState<Competition[]>([]);
-  const [premiosEvento, setPremiosEvento] = useState<Award[]>([]);
-  const [premiosCompeticion, setPremiosCompeticion] = useState<Record<number, Award[]>>({});
-  const [cargandoPremios, setCargandoPremios] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
@@ -58,7 +53,6 @@ export function EventEditPage() {
         setEvento(ev);
         setCompeticiones(comps as Competition[]);
         reset({ nombre: ev.nombre, lugar: ev.lugar || '', descripcion: ev.descripcion || '' });
-        cargarPremios(Number(eventId), comps as Competition[]);
       } catch {
         toast.error('No se pudo cargar el evento');
       } finally {
@@ -71,6 +65,7 @@ export function EventEditPage() {
 
   async function guardarInfo(data: EventForm) {
     if (!eventId) return;
+    if (!window.confirm('¿Guardar los cambios de este evento?')) return;
     setGuardando(true);
     try {
       await votifyApi.updateEvent(Number(eventId), {
@@ -86,55 +81,8 @@ export function EventEditPage() {
     }
   }
 
-  async function cargarPremios(idEvento = Number(eventId), comps = competiciones) {
-    if (!idEvento) return;
-    setCargandoPremios(true);
-    try {
-      const [eventAwards, competitionAwards] = await Promise.all([
-        votifyApi.getEventAwards(idEvento),
-        Promise.all(comps.map(async (comp) => [comp.id, await votifyApi.getCompetitionAwards(comp.id)] as const))
-      ]);
-      setPremiosEvento(eventAwards);
-      setPremiosCompeticion(Object.fromEntries(competitionAwards));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los premios');
-    } finally {
-      setCargandoPremios(false);
-    }
-  }
-
-  async function crearPremioEvento(payload: AwardPayload) {
-    if (!eventId) return;
-    const award = await votifyApi.createEventAward(Number(eventId), payload);
-    setPremiosEvento((prev) => [...prev, award]);
-    toast.success('Premio creado');
-  }
-
-  async function crearPremioCompeticion(competitionId: number, payload: AwardPayload) {
-    const award = await votifyApi.createCompetitionAward(competitionId, payload);
-    setPremiosCompeticion((prev) => ({
-      ...prev,
-      [competitionId]: [...(prev[competitionId] ?? []), award]
-    }));
-    toast.success('Premio creado');
-  }
-
-  async function actualizarPremio(awardId: number, payload: AwardPayload) {
-    const award = await votifyApi.updateAward(awardId, payload);
-    setPremiosEvento((prev) => prev.map((item) => item.id === awardId ? award : item));
-    setPremiosCompeticion((prev) => Object.fromEntries(
-      Object.entries(prev).map(([key, awards]) => [key, awards.map((item) => item.id === awardId ? award : item)])
-    ));
-    toast.success('Premio actualizado');
-  }
-
   async function eliminarPremio(awardId: number) {
-    await votifyApi.deleteAward(awardId);
-    setPremiosEvento((prev) => prev.filter((item) => item.id !== awardId));
-    setPremiosCompeticion((prev) => Object.fromEntries(
-      Object.entries(prev).map(([key, awards]) => [key, awards.filter((item) => item.id !== awardId)])
-    ));
-    toast.success('Premio eliminado');
+    if (!window.confirm('¿Eliminar este premio?')) return;
   }
 
   async function agregarCompeticion() {
@@ -146,7 +94,6 @@ export function EventEditPage() {
         descripcion: nuevaComp.descripcion || null
       }) as Competition;
       setCompeticiones([...competiciones, data]);
-      setPremiosCompeticion((prev) => ({ ...prev, [data.id]: [] }));
       setNuevaComp({ nombre: '', descripcion: '' });
       setModalCompeticion(false);
       toast.success('Competición añadida');
@@ -184,6 +131,7 @@ export function EventEditPage() {
   }
 
   async function guardarCompeticion(comp: Competition) {
+    if (!window.confirm(`¿Guardar los cambios de la competición "${comp.nombre}"?`)) return;
     try {
       await votifyApi.updateCompetition(comp.id, {
         nombre: comp.nombre,
@@ -200,11 +148,6 @@ export function EventEditPage() {
     try {
       await votifyApi.deleteCompetition(comp.id);
       setCompeticiones(competiciones.filter((item) => item.id !== comp.id));
-      setPremiosCompeticion((prev) => {
-        const next = { ...prev };
-        delete next[comp.id];
-        return next;
-      });
       toast.success('Competicion eliminada');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo eliminar la competición');
@@ -235,6 +178,14 @@ export function EventEditPage() {
     <Layout>
       <div className="max-w-3xl mx-auto">
         <Breadcrumb items={[{ label: 'Mis eventos', to: '/admin' }, { label: evento?.nombre ?? '' }]} />
+        <button
+          type="button"
+          onClick={() => navigate('/admin')}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-indigo-700"
+        >
+          <ArrowLeft size={16} />
+          Volver
+        </button>
 
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
           {TABS.map((t, i) => (
@@ -345,44 +296,6 @@ export function EventEditPage() {
           </div>
         )}
 
-        {tab === 2 && (
-          <div className="space-y-4">
-            <AwardManager
-              title="Event awards"
-              subtitle="General prizes associated with the whole event."
-              awards={premiosEvento}
-              loading={cargandoPremios}
-              onCreate={crearPremioEvento}
-              onUpdate={actualizarPremio}
-              onDelete={eliminarPremio}
-            />
-
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Competition awards</h2>
-                <p className="text-sm text-gray-500">Define specific prizes for each category or competition.</p>
-              </div>
-              {competiciones.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8 bg-white rounded-xl border border-gray-100">
-                  Create a competition before assigning competition awards.
-                </p>
-              ) : (
-                competiciones.map((comp) => (
-                  <AwardManager
-                    key={comp.id}
-                    title={comp.nombre}
-                    subtitle={comp.descripcion || 'Awards for this competition.'}
-                    awards={premiosCompeticion[comp.id] ?? []}
-                    loading={cargandoPremios}
-                    onCreate={(payload) => crearPremioCompeticion(comp.id, payload)}
-                    onUpdate={actualizarPremio}
-                    onDelete={eliminarPremio}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <Modal open={modalCompeticion} onClose={() => setModalCompeticion(false)} title="Nueva competición">

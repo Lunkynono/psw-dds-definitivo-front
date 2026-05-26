@@ -5,11 +5,11 @@ import { Modal } from '../ui/Modal';
 import { Award, AwardPayload, AwardType } from '../../types/award';
 
 const AWARD_TYPES: Array<{ value: AwardType; label: string; icon: typeof Trophy; color: string }> = [
-  { value: 'trophy', label: 'Trophy', icon: Trophy, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'cash', label: 'Cash', icon: Banknote, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'recognition', label: 'Recognition', icon: Medal, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { value: 'sponsor', label: 'Sponsor', icon: Handshake, color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { value: 'other', label: 'Other', icon: Gift, color: 'bg-gray-50 text-gray-700 border-gray-200' }
+  { value: 'trophy', label: 'Trofeo', icon: Trophy, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { value: 'cash', label: 'Premio económico', icon: Banknote, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { value: 'recognition', label: 'Reconocimiento', icon: Medal, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { value: 'sponsor', label: 'Patrocinio', icon: Handshake, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { value: 'other', label: 'Otro', icon: Gift, color: 'bg-gray-50 text-gray-700 border-gray-200' }
 ];
 
 const emptyDraft: AwardPayload = {
@@ -89,17 +89,17 @@ export function AwardManager({ title, subtitle, awards, loading, onCreate, onUpd
         </div>
         <Button size="sm" onClick={openCreate}>
           <Plus size={14} />
-          Add award
+          Añadir premio
         </Button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-4">Loading awards...</p>
+          <p className="text-sm text-gray-400 py-4">Cargando premios...</p>
       ) : sortedAwards.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/70 px-4 py-6 text-center">
           <Trophy size={26} className="mx-auto text-gray-300 mb-2" />
-          <p className="text-sm font-medium text-gray-600">No awards yet</p>
-          <p className="text-xs text-gray-400 mt-1">Define what each position receives and the delivery conditions.</p>
+          <p className="text-sm font-medium text-gray-600">Aún no hay premios</p>
+          <p className="text-xs text-gray-400 mt-1">Define qué recibe cada posición y las condiciones de entrega.</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -116,7 +116,7 @@ export function AwardManager({ title, subtitle, awards, loading, onCreate, onUpd
                         {type.label}
                       </span>
                       <span className="rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                        Position {award.posicion}
+                        Posición {award.posicion}
                       </span>
                     </div>
                     <p className="font-medium text-gray-900">{award.descripcion}</p>
@@ -139,11 +139,11 @@ export function AwardManager({ title, subtitle, awards, loading, onCreate, onUpd
         </div>
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit award' : 'New award'} maxWidth="max-w-md">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar premio' : 'Nuevo premio'} maxWidth="max-w-md">
         <div className="space-y-4">
           <div className="grid grid-cols-[1fr_7rem] gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
               <select
                 value={draft.tipo}
                 onChange={(event) => setDraft((prev) => ({ ...prev, tipo: event.target.value as AwardType }))}
@@ -155,7 +155,7 @@ export function AwardManager({ title, subtitle, awards, loading, onCreate, onUpd
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Posición</label>
               <input
                 type="number"
                 min="1"
@@ -166,28 +166,28 @@ export function AwardManager({ title, subtitle, awards, loading, onCreate, onUpd
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción <span className="text-red-500">*</span></label>
             <input
               value={draft.descripcion}
               onChange={(event) => setDraft((prev) => ({ ...prev, descripcion: event.target.value }))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              placeholder="Winner trophy, scholarship, mentoring package..."
+              placeholder="Trofeo, beca, mentoría..."
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Delivery conditions</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones de entrega</label>
             <textarea
               rows={3}
               value={draft.condicionesEntrega ?? ''}
               onChange={(event) => setDraft((prev) => ({ ...prev, condicionesEntrega: event.target.value }))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
-              placeholder="Requires attendance, ID verification, sponsor confirmation..."
+              placeholder="Requiere asistencia, verificación de identidad, confirmación del patrocinador..."
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button loading={saving} onClick={saveAward} disabled={!draft.descripcion.trim()}>
-              Save award
+              Guardar premio
             </Button>
           </div>
         </div>

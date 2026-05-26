@@ -1,4 +1,4 @@
-import { ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -241,6 +241,34 @@ export function SurveyCreatePage() {
     );
   }
 
+  function usarPlantillaCriterio(tipo: 'numerico' | 'rubrica') {
+    if (tipo === 'rubrica') {
+      setNuevoCriterio({
+        ...CRITERION_DRAFT_EMPTY,
+        titulo: 'Evaluación general',
+        descripcion: 'Valoración de calidad técnica, innovación y presentación',
+        tipo: 'rubrica',
+        peso: '3',
+        rubricaAspectos: [
+          { texto: 'Calidad técnica', peso: 1, descriptores: {} },
+          { texto: 'Innovación', peso: 1, descriptores: {} },
+          { texto: 'Presentación', peso: 1, descriptores: {} }
+        ]
+      });
+    } else {
+      setNuevoCriterio({
+        ...CRITERION_DRAFT_EMPTY,
+        titulo: 'Puntuación general',
+        descripcion: 'Valoración numérica global del proyecto',
+        tipo: 'numerico',
+        peso: '1',
+        rango_min: '0',
+        rango_max: '10'
+      });
+    }
+    setModalCriterio(true);
+  }
+
   async function guardarCriterio() {
     if (!competitionId || !nuevoCriterio.titulo.trim()) {
       toast.error('El título es obligatorio');
@@ -351,6 +379,12 @@ export function SurveyCreatePage() {
       toast.error('Selecciona al menos un jurado');
       return;
     }
+    const mensajeConfirmacion = esBorrador
+      ? '¿Guardar esta encuesta como borrador?'
+      : horaApertura
+        ? '¿Crear y programar esta encuesta con las asignaciones seleccionadas?'
+        : '¿Crear y abrir esta encuesta ahora?';
+    if (!window.confirm(mensajeConfirmacion)) return;
 
     setGuardando(true);
     try {
@@ -418,6 +452,14 @@ export function SurveyCreatePage() {
           <ChevronRight size={14} />
           <span className="text-gray-900">Nueva encuesta</span>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/competiciones/${competitionId}`)}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-indigo-700"
+        >
+          <ArrowLeft size={16} />
+          Volver
+        </button>
 
         <form onSubmit={handleSubmit((data) => onSubmit(data))} className="space-y-5">
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
@@ -549,14 +591,30 @@ export function SurveyCreatePage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-gray-700">Criterios de evaluación</h2>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setModalCriterio(true)}
-              >
-                <Plus size={14} /> Crear criterio
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCriteriosSeleccionados(criterios.map((criterio) => criterio.id))}
+                  disabled={criterios.length === 0}
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-300"
+                >
+                  Seleccionar todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCriteriosSeleccionados([])}
+                  disabled={criteriosSeleccionados.length === 0}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:text-gray-300"
+                >
+                  Quitar todos
+                </button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => usarPlantillaCriterio('numerico')}>
+                  Plantilla rápida
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setModalCriterio(true)}>
+                  <Plus size={14} /> Crear criterio
+                </Button>
+              </div>
             </div>
             {criterios.length === 0 ? (
               <p className="text-sm text-gray-500">No hay criterios. Crea el primero.</p>
@@ -609,6 +667,14 @@ export function SurveyCreatePage() {
                     >
                       Asignar todos
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setEquiposSeleccionados([])}
+                      disabled={equiposSeleccionados.length === 0}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:text-gray-300"
+                    >
+                      Quitar todos
+                    </button>
                     <Badge color="gray">
                       {equiposSeleccionados.length}/{equipos.length}
                     </Badge>
@@ -652,6 +718,14 @@ export function SurveyCreatePage() {
                       className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-300"
                     >
                       Asignar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setJuecesSeleccionados([])}
+                      disabled={juecesSeleccionados.length === 0}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:text-gray-300"
+                    >
+                      Quitar todos
                     </button>
                     <Badge color="gray">
                       {juecesSeleccionados.length}/{jueces.length}

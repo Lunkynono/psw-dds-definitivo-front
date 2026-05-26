@@ -1,7 +1,7 @@
-import { Award as AwardIcon, Clock, Download, Pencil, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Award as AwardIcon, Clock, Download, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../../shared/components/ui/Badge';
 import { Breadcrumb } from '../../shared/components/ui/Breadcrumb';
 import { Button } from '../../shared/components/ui/Button';
@@ -29,6 +29,28 @@ import {
 
 type Comentario = { texto: string; criterio: string; proyecto: string; origen: 'Público' | 'Jurado' };
 
+type ConfirmAction = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  variant?: 'primary' | 'danger';
+  onConfirm: () => Promise<void> | void;
+};
+
+type ManualChange = {
+  rowId: number;
+  previousScore: number | null;
+  nextScore: number | null;
+  projectName: string;
+};
+
+const EMPTY_MANUAL_CHANGE: ManualChange = {
+  rowId: -1,
+  previousScore: null,
+  nextScore: null,
+  projectName: ''
+};
+
 const TABS = ['Ranking', 'Comentarios', 'Resumen IA', 'Criterios', 'Asignaciones'];
 
 const STATE_LABEL: Record<SurveyState, string> = {
@@ -48,6 +70,7 @@ const STATE_COLOR: Record<SurveyState, 'gray' | 'green' | 'yellow' | 'red'> = {
 export function SurveyResultsPage() {
   const { surveyId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const desdeJuez = (location.state as { from?: string } | null)?.from === 'juez';
   const [encuesta, setEncuesta] = useState<Survey | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
@@ -61,6 +84,8 @@ export function SurveyResultsPage() {
   const [generandoResumenes, setGenerandoResumenes] = useState(false);
   const [editManual, setEditManual] = useState<Record<number, string>>({});
   const [guardandoManual, setGuardandoManual] = useState<Record<number, boolean>>({});
+  const [ultimoCambioManual, setUltimoCambioManual] = useState<ManualChange>(EMPTY_MANUAL_CHANGE);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   type EquipoDisponible = { id: number; nombre: string; proyecto?: Array<{ nombre: string }> };
   type JuezDisponible = { persona_id: string; persona?: { nombre?: string; correo?: string } };
@@ -101,6 +126,10 @@ export function SurveyResultsPage() {
   useEffect(() => {
     cargar();
   }, [surveyId]);
+
+  function pedirConfirmacion(action: ConfirmAction) {
+    setConfirmAction(action);
+  }
 
   async function recalculate() {
     if (!surveyId) return;
@@ -207,6 +236,8 @@ export function SurveyResultsPage() {
   async function guardarManual(row: ResultRow) {
     const val = editManual[row.id];
     const puntaje = val === '' ? null : Number(val);
+    const puntajeAnterior = row.puntaje_manual ?? null;
+    const nombreProyecto = row.proyecto?.nombre ?? `Proyecto ${row.proyecto_id}`;
     setGuardandoManual((prev) => ({ ...prev, [row.id]: true }));
     try {
       await votifyApi.updateManualScore(row.id, puntaje);
@@ -218,9 +249,50 @@ export function SurveyResultsPage() {
         delete next[row.id];
         return next;
       });
+      setUltimoCambioManual({
+        rowId: row.id,
+        previousScore: puntajeAnterior,
+        nextScore: puntaje,
+        projectName: nombreProyecto
+      });
       toast.success('Puntaje guardado');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el puntaje');
+    } finally {
+      setGuardandoManual((prev) => ({ ...prev, [row.id]: false }));
+    }
+  }
+
+  async function deshacerUltimoCambioManual() {
+    if (ultimoCambioManual.rowId < 0) return;
+    const cambio = ultimoCambioManual;
+    setGuardandoManual((prev) => ({ ...prev, [cambio.rowId]: true }));
+    try {
+      await votifyApi.updateManualScore(cambio.rowId, cambio.previousScore);
+      setResults((prev) =>
+        prev.map((r) => (r.id === cambio.rowId ? { ...r, puntaje_manual: cambio.previousScore } : r))
+      );
+      setUltimoCambioManual(EMPTY_MANUAL_CHANGE);
+      toast.success('Cambio manual deshecho');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo deshacer el cambio');
+    } finally {
+      setGuardandoManual((prev) => ({ ...prev, [cambio.rowId]: false }));
+    }
+  }
+
+  async function deshacerManual(row: ResultRow) {
+    const nombreProyecto = row.proyecto?.nombre ?? `Proyecto ${row.proyecto_id}`;
+    setGuardandoManual((prev) => ({ ...prev, [row.id]: true }));
+    try {
+      await votifyApi.updateManualScore(row.id, null);
+      setResults((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, puntaje_manual: null } : r))
+      );
+      if (ultimoCambioManual.rowId === row.id) setUltimoCambioManual(EMPTY_MANUAL_CHANGE);
+      toast.success(`Puntaje manual de ${nombreProyecto} deshecho`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo deshacer el cambio');
     } finally {
       setGuardandoManual((prev) => ({ ...prev, [row.id]: false }));
     }
@@ -305,7 +377,7 @@ export function SurveyResultsPage() {
       return;
     }
 
-    const position = result.posicion_final ?? index + 1;
+    const position = index + 1;
     if (position > 3) return;
 
     downloadWinnerCertificatePdf(encuesta, {
@@ -342,6 +414,14 @@ export function SurveyResultsPage() {
           { label: encuesta?.competicion?.nombre ?? '', to: `/admin/competiciones/${encuesta?.competicion_id}` },
           { label: encuesta?.nombre ?? '' }
         ]} />
+        <button
+          type="button"
+          onClick={() => navigate(desdeJuez ? '/juez' : encuesta?.competicion_id ? `/admin/competiciones/${encuesta.competicion_id}` : '/admin')}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-indigo-700"
+        >
+          <ArrowLeft size={16} />
+          Volver
+        </button>
         <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{encuesta?.nombre ?? 'Resultados'}</h1>
@@ -388,7 +468,13 @@ export function SurveyResultsPage() {
                 <Button
                   size="sm"
                   variant="danger"
-                  onClick={() => cambiarEstado('cerrada')}
+                  onClick={() => pedirConfirmacion({
+                    title: 'Cerrar encuesta',
+                    message: 'La encuesta dejará de aceptar votos. Podrás reabrirla después si hace falta.',
+                    confirmLabel: 'Cerrar encuesta',
+                    variant: 'danger',
+                    onConfirm: () => cambiarEstado('cerrada')
+                  })}
                   loading={cambiandoEstado}
                 >
                   Cerrar
@@ -404,7 +490,17 @@ export function SurveyResultsPage() {
               </button>
             )}
             {estado === 'cerrada' && (
-              <Button size="sm" variant="secondary" onClick={reabrir} loading={cambiandoEstado}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => pedirConfirmacion({
+                  title: 'Reabrir encuesta',
+                  message: 'La encuesta volverá a aceptar votos y los resultados podrán cambiar.',
+                  confirmLabel: 'Reabrir',
+                  onConfirm: reabrir
+                })}
+                loading={cambiandoEstado}
+              >
                 Reabrir
               </Button>
             )}
@@ -430,7 +526,30 @@ export function SurveyResultsPage() {
         {tab === 0 && (
           <div>
             <div className="flex justify-end gap-2 mb-4 flex-wrap">
-              <Button onClick={recalculate} loading={recalculando}>
+              {false ? (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <span>Último cambio: {ultimoCambioManual.projectName}</span>
+                  <button
+                    type="button"
+                    onClick={deshacerUltimoCambioManual}
+                    className="inline-flex items-center gap-1 font-semibold text-amber-900 hover:text-amber-700"
+                  >
+                    <RotateCcw size={13} />
+                    Deshacer
+                  </button>
+                </div>
+              ) : (
+                <span />
+              )}
+              <Button
+                onClick={() => pedirConfirmacion({
+                  title: 'Calcular resultados',
+                  message: 'Se actualizará el ranking con los votos actuales. Los puntajes manuales se mantendrán.',
+                  confirmLabel: 'Calcular',
+                  onConfirm: recalculate
+                })}
+                loading={recalculando}
+              >
                 Calcular resultados
               </Button>
             </div>
@@ -447,7 +566,7 @@ export function SurveyResultsPage() {
                   const editando = r.id in editManual;
                   const nombre = r.proyecto?.nombre ?? `Proyecto ${r.proyecto_id}`;
                   const equipo = r.proyecto?.equipo?.nombre;
-                  const pos = r.posicion_final ?? idx + 1;
+                  const pos = idx + 1;
 
                   const medalStyles: Record<number, { border: string; bg: string; badge: string; badgeClass: string; progress: string }> = {
                     1: {
@@ -475,6 +594,7 @@ export function SurveyResultsPage() {
                   const medal = medalStyles[pos];
                   const premio = premios.find((item) => item.posicion === pos);
                   const puedeGenerarCertificado = encuesta?.estado === 'cerrada' && pos <= 3;
+                  const puedeDeshacer = esManual;
 
                   return (
                     <div key={r.id} className={`bg-white border border-gray-100 rounded-xl p-4 shadow-card ${medal?.border ?? ''} ${medal?.bg ?? ''}`}>
@@ -518,6 +638,16 @@ export function SurveyResultsPage() {
 
                         <div className="flex items-center gap-2">
                           {esManual && <Badge color="yellow">manual</Badge>}
+                          {puedeDeshacer && (
+                            <button
+                              type="button"
+                              onClick={() => deshacerManual(r)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                            >
+                              <RotateCcw size={13} />
+                              Deshacer
+                            </button>
+                          )}
                           {editando ? (
                             <div className="flex items-center gap-1">
                               <input
@@ -708,6 +838,12 @@ export function SurveyResultsPage() {
                       className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-300">
                       Asignar todos
                     </button>
+                    <button type="button"
+                      onClick={() => setEquiposAsignados([])}
+                      disabled={equiposAsignados.length === 0}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:text-gray-300">
+                      Quitar todos
+                    </button>
                     <Badge color="gray">{equiposAsignados.length}/{equiposDisponibles.length}</Badge>
                   </div>
                 </div>
@@ -739,6 +875,12 @@ export function SurveyResultsPage() {
                       disabled={juecesDisponibles.length === 0}
                       className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-300">
                       Asignar todos
+                    </button>
+                    <button type="button"
+                      onClick={() => setJuecesAsignados([])}
+                      disabled={juecesAsignados.length === 0}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:text-gray-300">
+                      Quitar todos
                     </button>
                     <Badge color="gray">{juecesAsignados.length}/{juecesDisponibles.length}</Badge>
                   </div>
@@ -883,6 +1025,35 @@ export function SurveyResultsPage() {
                 : estado === 'borrador'
                   ? 'Publicar'
                   : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(confirmAction)}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? 'Confirmar acción'}
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+            <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
+            <p>{confirmAction?.message}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setConfirmAction(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant={confirmAction?.variant ?? 'primary'}
+              onClick={async () => {
+                const action = confirmAction;
+                setConfirmAction(null);
+                await action?.onConfirm();
+              }}
+            >
+              {confirmAction?.confirmLabel ?? 'Confirmar'}
             </Button>
           </div>
         </div>
