@@ -32,8 +32,8 @@ import {
 
 const TIPO_LABELS = {
   numerico: 'Numérico',
-  radio: 'Radio',
-  checklist: 'Checklist',
+  radio: 'Elección única',
+  checklist: 'Selección múltiple',
   rubrica: 'Rúbrica',
   comentario: 'Comentario'
 };
@@ -827,8 +827,8 @@ export function SurveyCreatePage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="numerico">Numérico</option>
-                <option value="radio">Radio</option>
-                <option value="checklist">Checklist</option>
+                <option value="radio">Elección única</option>
+                <option value="checklist">Selección múltiple</option>
                 <option value="rubrica">Rúbrica</option>
                 <option value="comentario">Comentario</option>
               </select>

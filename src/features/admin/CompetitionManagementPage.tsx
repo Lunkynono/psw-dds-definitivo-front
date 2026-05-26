@@ -29,8 +29,8 @@ const ESTADO_ORDER: Record<string, number> = { borrador: 0, programada: 1, abier
 
 const TIPO_LABELS = {
   numerico: 'Numérico',
-  radio: 'Radio',
-  checklist: 'Checklist',
+  radio: 'Elección única',
+  checklist: 'Selección múltiple',
   rubrica: 'Rúbrica',
   comentario: 'Comentario'
 };
@@ -1220,8 +1220,8 @@ function CriterionModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
             <select value={value.tipo} onChange={(e) => setValue(cambiarTipoCriterio(value, e.target.value as CriterionType))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
               <option value="numerico">Numérico</option>
-              <option value="radio">Radio</option>
-              <option value="checklist">Checklist</option>
+              <option value="radio">Elección única</option>
+              <option value="checklist">Selección múltiple</option>
               <option value="rubrica">Rúbrica</option>
               <option value="comentario">Comentario</option>
             </select>
