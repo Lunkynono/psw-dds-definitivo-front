@@ -209,8 +209,8 @@ export function CompetitionManagementPage() {
 
     try {
       setPremios(await votifyApi.getCompetitionAwards(Number(competitionId)));
-    } catch {
-      // la tabla premio puede no existir aún en la BD
+    } catch (error) {
+      toast.error('Error al cargar premios: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
